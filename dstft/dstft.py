@@ -147,17 +147,10 @@ class DSTFT(nn.Module):
         return dl_dp.unsqueeze(0)
     
     def stft(self, x: torch.tensor, direction: str):
-        batch_size, length, device, dtype = x.shape[0], x.shape[-1], x.device, x.dtype     
+        #batch_size, length, device, dtype = x.shape[0], x.shape[-1], x.device, x.dtype     
         
-        # frames index and strided x
-        #strided_x = x.as_strided((batch_size, self.T, self.N), (batch_size, self.stride, 1)) # x.unfold(-1, self.N, stride)     
-        
-        idx_floor = self.frames.floor()
-        idx_frac = self.frames - idx_floor
-        idx_floor = idx_floor.long()[:, None].expand((self.T, self.N)) + torch.arange(0, self.N, device=self.device)
-        idx_floor[idx_floor >= self.L] = -1
-        strided_x = x[:, idx_floor]
-        strided_x[:, idx_floor < 0] = 0
+        # Generate strided signal and shift idx_frac
+        strided_x, idx_frac = self.stride(x)
         
         # Generate the tapering window function for the STFT
         self.tap_win = self.window_function(direction=direction, idx_frac=idx_frac).permute(2, 1, 0)    
@@ -181,7 +174,17 @@ class DSTFT(nn.Module):
 
             
         return stft
-        
+    
+    def stride(self, x) -> torch.tensor:                
+        # frames index and strided x
+        idx_floor = self.frames.floor()
+        idx_frac = self.frames - idx_floor
+        idx_floor = idx_floor.long()[:, None].expand((self.T, self.N)) + torch.arange(0, self.N, device=self.device)
+        idx_floor[idx_floor >= self.L] = -1
+        strided_x = x[:, idx_floor]
+        strided_x[:, idx_floor < 0] = 0
+        return strided_x, idx_frac
+    
     def window_function(self, direction: str, idx_frac) -> torch.tensor:
         if self.tapering_function not in {'hann', 'hanning',}:
             raise ValueError(f"tapering_function must be one of '{'hann', 'hanning',}', but got padding_mode='{self.tapering_function}'")
