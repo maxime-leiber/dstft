@@ -163,7 +163,7 @@ class DSTFT(nn.Module):
         
         
         # Generate Fourier coefficients    
-        coeff = torch.arange(end=self.N, device=device, dtype=dtype, requires_grad=False)
+        coeff = torch.arange(end=self.N, device=self.device, dtype=self.dtype, requires_grad=False)
         coeff = coeff[:, None] @ coeff[None, :]
         coeff = torch.exp(- 2j * pi * coeff / self.N) 
         
