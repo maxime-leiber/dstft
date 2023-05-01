@@ -58,7 +58,7 @@ class DSTFT(nn.Module):
         self.T = int(1 + torch.div(x.shape[-1] - (self.N - 1) - 1, stride, rounding_mode='floor'))        
         # self.T = int(torch.div(self.L - self.N/2, stride, rounding_mode='floor'))
         
-        if win_min is None: self.win_min = self.N / 20
+        if win_min is None: self.win_min = self.N / 20 # 0
         else: self.win_min = win_min        
         if win_max is None: self.win_max = self.N
         else: self.win_max = win_max
@@ -230,25 +230,29 @@ class DSTFT(nn.Module):
         cov = torch.sum(end-init) / self.L
         return cov
 
-    def print(self, spec, x, marklist=None):
-        plt.figure()
-        plt.imshow(spec[0].detach().cpu().log(), aspect='auto', origin='lower', cmap='jet', extent=[0,spec.shape[-1], 0, 500])
-        plt.ylabel('frequencies (Hz)', fontsize=18)
-        plt.xlabel('frames', fontsize=18)
-        plt.show()
-
+    def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False):
         plt.figure()
         ax = plt.subplot()
-        im = ax.imshow(self.actual_win_length[:self.F].detach().cpu(), aspect='auto', origin='lower', cmap='jet')
-        ax.set_ylabel('frequencies (Hz)', fontsize=18)
-        ax.set_xlabel('frames', fontsize=18)
-        plt.colorbar(im, ax=ax)
-        im.set_clim(self.win_min, self.win_max)   
-        plt.show()   
+        im = ax.imshow(spec[0].detach().cpu().log(), aspect='auto', origin='lower', cmap='jet', extent=[0,spec.shape[-1], 0, spec.shape[-2]])
+        plt.ylabel('frequencies (Hz)', fontsize=18)
+        plt.xlabel('frames', fontsize=18)
+        if bar == True: plt.colorbar(im, ax=ax)
+        plt.show()
 
-        if self.tap_win is not None:
+        if weights == True:
+            plt.figure()
+            ax = plt.subplot()
+            im = ax.imshow(self.actual_win_length[:self.F].detach().cpu(), aspect='auto', origin='lower', cmap='jet')
+            ax.set_ylabel('frequencies (Hz)', fontsize=18)
+            ax.set_xlabel('frames', fontsize=18)
+            if bar == True : 
+                plt.colorbar(im, ax=ax)
+                im.set_clim(self.win_min, self.win_max)   
+            plt.show()   
+
+        if self.tap_win is not None and wins == True:
             fig, ax = plt.subplots()
-            ax.plot(self.T + .5 + .5 * x.squeeze().cpu().numpy(), linewidth=1,)
+            ax.plot(self.T + .5 + x.squeeze().cpu().numpy(), linewidth=1,)
             for i, start in enumerate(self.frames.detach().cpu()):
                 ax.plot(range(int(start.floor().item()), int(start.floor().item()+self.N)), self.T-i-1.3 + 150 * self.tap_win[:, i, :, :].mean(dim=1).squeeze().detach().cpu(), c='#1f77b4')
 
@@ -443,25 +447,29 @@ class DSpec(nn.Module):
         cov = torch.sum(end-init) / self.L
         return cov
 
-    def print(self, spec, x, marklist=None):
-        plt.figure()
-        plt.imshow(spec[0].detach().cpu().log(), aspect='auto', origin='lower', cmap='jet', extent=[0,spec.shape[-1], 0, 500])
-        plt.ylabel('frequencies (Hz)', fontsize=18)
-        plt.xlabel('frames', fontsize=18)
-        plt.show()
-
+    def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False):
         plt.figure()
         ax = plt.subplot()
-        im = ax.imshow(self.actual_win_length[None, :].detach().cpu(), aspect='auto', origin='lower', cmap='jet')
-        ax.set_ylabel('frequencies (Hz)', fontsize=18)
-        ax.set_xlabel('frames', fontsize=18)
-        plt.colorbar(im, ax=ax)
-        im.set_clim(self.win_min, self.win_max)   
-        plt.show()   
+        im = ax.imshow(spec[0].detach().cpu().log(), aspect='auto', origin='lower', cmap='jet', extent=[0,spec.shape[-1], 0, spec.shape[-2]])
+        plt.ylabel('frequencies (Hz)', fontsize=18)
+        plt.xlabel('frames', fontsize=18)
+        if bar == True : plt.colorbar(im, ax=ax)
+        plt.show()
 
-        if self.tap_win is not None:
+        if weights == True:
+            plt.figure()
+            ax = plt.subplot()
+            im = ax.imshow(self.actual_win_length[None, :].detach().cpu(), aspect='auto', origin='lower', cmap='jet')
+            ax.set_ylabel('frequencies (Hz)', fontsize=18)
+            ax.set_xlabel('frames', fontsize=18)
+            if bar == True : 
+                plt.colorbar(im, ax=ax)
+                im.set_clim(self.win_min, self.win_max)   
+            plt.show()   
+
+        if self.tap_win is not None and wins == True:
             fig, ax = plt.subplots()
-            ax.plot(self.T + .5 + 2 * x.squeeze().cpu().numpy(), linewidth=1,)
+            ax.plot(self.T + .5 + x.squeeze().cpu().numpy(), linewidth=1,)
             for i, start in enumerate(self.frames.detach().cpu()):
                 ax.plot(range(int(start.floor().item()), int(start.floor().item()+self.N)), self.T-i-1.3 + 150 * self.tap_win[:, i, :].squeeze().detach().cpu(), c='#1f77b4')
 
