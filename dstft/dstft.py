@@ -22,8 +22,7 @@ class DSTFT(nn.Module):
                     win_min = None,
                     win_max = None,
                     stride_min = None,
-                    stride_max = None,
-                    requires_grad: bool = True,      
+                    stride_max = None,    
                     
                     tapering_function: str = 'hann',
                     sr : int = 16_000,
@@ -64,7 +63,7 @@ class DSTFT(nn.Module):
         else: self.win_max = win_max
         if stride_min is None: self.stride_min = 0
         else: self.stride_min = stride_min        
-        if stride_max is None: self.stride_max = self.N
+        if stride_max is None: self.stride_max = max(self.N, abs(stride))
         else: self.stride_max = stride_max
         
         # HOP LENGTH / FRAME INDEX
@@ -227,15 +226,18 @@ class DSTFT(nn.Module):
                 d_tap_win[mask2] = 0
                 return d_tap_win
             
-    def coverage(self):            
+    def coverage(self): # in [0, 1]    
         # compute coverage
-        print(self.actual_win_length.shape, self.actual_strides.shape)
-        coverage = torch.minimum(self.actual_strides[1:], self.actual_win_length[..., 0:-1]) 
-        coverage = torch.cat((coverage, self.actual_win_length[:, -1].unsqueeze(-1)), dim=1).squeeze()
-        init = torch.minimum(torch.maximum(torch.zeros_like(self.frames), self.frames+self.N/2-self.actual_win_length[0]/2), self.L*torch.ones_like(self.frames))
-        end = torch.maximum(torch.minimum(self.L*torch.ones_like(self.frames), self.frames+self.N/2+ torch.minimum( self.actual_win_length[0]/2, - self.actual_win_length[0]/2+coverage )), torch.zeros_like(self.frames))
-        
-        cov = torch.sum(end-init) / self.L
+        expanded_win, _ = self.actual_win_length.expand((self.N, self.T)).min(dim=0, keepdim=False)
+        cov = expanded_win[0]
+        maxi = self.frames[0] + self.N/2 + expanded_win[0]/2        
+        for i in range(1, self.T):
+            start = torch.min(self.L*torch.ones_like(expanded_win[i]), torch.max(torch.zeros_like(expanded_win[i]), self.frames[i] + self.N/2 - expanded_win[i]/2))
+            end = torch.min(self.L*torch.ones_like(expanded_win[i]), torch.max(torch.zeros_like(expanded_win[i]), self.frames[i] + self.N/2 + expanded_win[i]/2))
+            if end > maxi:
+                cov += end - torch.max(start, maxi)
+                maxi = end
+        cov /= self.L
         return cov
 
     def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False):
