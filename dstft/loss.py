@@ -1,5 +1,8 @@
+from torch.autograd import Variable
+import copy 
 import numpy as np
 import torch
+
 
 def entropy_loss(x):
     x1 = torch.reshape(x, (x.shape[0], -1)) # B, N 
@@ -13,8 +16,8 @@ def entropyt_loss(x):
     return entropy.mean()
 
 def kurtosis_loss(x):
-    kur = x.pow(4).mean(dim=-1) / x.pow(2).mean(dim=-1).pow(2) # B, T
-    return kur.mean()
+    kur = x.pow(4).mean(dim=1) / x.pow(2).mean(dim=1).pow(2) # B, T
+    return kur #.mean()
 
 
 class MinNormSolver:
@@ -54,7 +57,6 @@ class MinNormSolver:
         ie. min_c |\sum c_i x_i|_2^2 st. \sum c_i = 1 , 1 >= c_1 >= 0 for all i, c_i + c_j = 1.0 for some i, j
         """
         dmin = 1e8
-        sol = None 
         for i in range(len(vecs)):
             for j in range(i+1,len(vecs)):
                 if (i,j) not in dps:
@@ -70,12 +72,10 @@ class MinNormSolver:
                     dps[(j, j)] = 0.0   
                     for k in range(len(vecs[i])):
                         dps[(j, j)] += torch.mul(vecs[j][k], vecs[j][k]).sum().data.cpu()
-                
                 c,d = MinNormSolver._min_norm_element_from2(dps[(i,i)], dps[(i,j)], dps[(j,j)])
                 if d < dmin:
                     dmin = d
-                    sol = [(i,j), c, d]
-                
+                    sol = [(i,j),c,d]
         return sol, dps
 
     def _projection2simplex(y):
@@ -119,11 +119,9 @@ class MinNormSolver:
         """
         # Solution lying at the combination of two points
         dps = {}
-
         init_sol, dps = MinNormSolver._min_norm_2d(vecs, dps)
         
-        
-        n = len(vecs)
+        n=len(vecs)
         sol_vec = np.zeros(n)
         sol_vec[init_sol[0][0]] = init_sol[1]
         sol_vec[init_sol[0][1]] = 1 - init_sol[1]
@@ -158,7 +156,6 @@ class MinNormSolver:
             if np.sum(np.abs(change)) < MinNormSolver.STOP_CRIT:
                 return sol_vec, nd
             sol_vec = new_sol_vec
-        return sol_vec, nd
 
     def find_min_norm_element_FW(vecs):
         """
@@ -204,3 +201,101 @@ class MinNormSolver:
             sol_vec = new_sol_vec
 
 
+def gradient_normalizers(grads, losses, normalization_type):
+    gn = {}
+    if normalization_type == 'l2':
+        for t in grads:
+            gn[t] = np.sqrt(np.sum([gr.pow(2).sum().data.cpu() for gr in grads[t]]))
+    elif normalization_type == 'loss':
+        for t in grads:
+            gn[t] = losses[t]
+    elif normalization_type == 'loss+':
+        for t in grads:
+            gn[t] = losses[t] * np.sqrt(np.sum([gr.pow(2).sum().data.cpu() for gr in grads[t]]))
+    elif normalization_type == 'none':
+        for t in grads:
+            gn[t] = 1.0
+    else:
+        print('ERROR: Invalid Normalization Type')
+    return gn
+
+
+
+
+# Scaling the loss functions based on the algorithm choice
+def scale_loss(dstft, x):
+    grads = {}
+    loss_data = {}
+    scale = {}
+    tasks = ['loss1', 'loss2']
+    params = [ {'params': dstft.parameters()}]
+    optimizer = torch.optim.Adam(params)
+    
+    
+    # Compute gradients wrt to loss1 
+    optimizer.zero_grad()
+    spec, *_ = dstft(x)    
+    loss1 = 1_000 / kurtosis_loss(spec).mean()
+    loss_data['loss1'] = loss1.data
+    loss1.backward()
+    
+    grads['loss1'] = []
+    for param in dstft.parameters():
+        if param.grad is not None:
+                grads['loss1'].append(Variable(param.grad.data.clone(), requires_grad=False))
+    
+    # Compute gradients wrt to loss2 
+    optimizer.zero_grad()
+    spec, *_ = dstft(x)  
+    loss2 = 1_000 * (1 - dstft.coverage())
+    loss_data['loss2'] = loss2.data
+    loss2.backward()
+    
+    grads['loss2'] = []
+    for param in dstft.parameters():
+        if param.grad is not None:
+                grads['loss2'].append(Variable(param.grad.data.clone(), requires_grad=False))
+                
+    
+    
+    # Normalize all gradients     
+    
+    my_tasks = copy.deepcopy(tasks)
+    removed_tasks = []
+    my_grads = {}
+    my_loss_data = {}
+    
+    for t in tasks:
+        if (loss_data[t] <=1e-6):
+            my_tasks.remove(t)
+            removed_tasks.append(t)
+        else:
+            my_grads[t] = grads[t]
+            my_loss_data[t] = loss_data[t]
+    
+    if len(my_tasks)>1:
+        gn = gradient_normalizers(my_grads, my_loss_data, 'loss+')
+
+        for t in my_tasks:
+            for gr_i in range(len(my_grads[t])):
+                my_grads[t][gr_i] = my_grads[t][gr_i] / gn[t]
+
+                
+        # Frank-Wolfe iteration to compute scales.
+        sol, min_norm =  MinNormSolver.find_min_norm_element([my_grads[t] for t in my_tasks])
+    
+        for i, t in enumerate(my_tasks):
+            scale[t] = float(sol[i])
+            
+        
+    else: # Only one task
+        
+        for i, t in enumerate(my_tasks):
+            scale[t] = 1.0
+
+    for i, t in enumerate(removed_tasks):
+            scale[t] = 0.0
+            
+    return scale
+        
+        

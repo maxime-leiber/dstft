@@ -121,7 +121,8 @@ class DSTFT(nn.Module):
         # Compute the temporal position (indices) of frames (support)
         expanded_stride = self.actual_strides.expand((self.T,))    
         frames = torch.zeros_like(expanded_stride)
-        frames[1:] = expanded_stride[1:].cumsum(dim=0)
+        frames[1:] = expanded_stride[1:].cumsum(dim=0)        
+        frames[0] = (self.actual_win_length.expand((self.N, self.T))[:, 0].max(dim=0, keepdim=False)[0] - self.N)/2
         #frames = torch.cumsum(self.actual_strides, dim=0)
         #print(frames)
         return frames
@@ -130,10 +131,13 @@ class DSTFT(nn.Module):
     def effective_strides(self):
         # Compute the strides between window (and not frames)
         expanded_stride = self.actual_strides.expand((self.T,))    
+        print(expanded_stride.shape, expanded_stride)
         effective_strides = torch.zeros_like(expanded_stride)
         effective_strides[1:] = expanded_stride[1:]
-        effective_strides = effective_strides - torch.cat((torch.tensor([self.N], dtype=self.dtype, device=self.device), self.actual_win_length.expand((self.T,))), dim=0).diff()/2
-        return effective_strides
+        print(effective_strides.shape, effective_strides)
+        cat = torch.cat((torch.tensor([self.N], dtype=self.dtype, device=self.device), self.actual_win_length.expand((self.T, self.N)).max(dim=1, keepdim=False)), dim=0).diff()/2
+        print(cat.shape, cat)
+        effective_strides = effective_strides - cat
         return effective_strides
     
     def forward(self, x):
