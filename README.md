@@ -5,5 +5,5 @@ DSTFT is a neural network layer whose weights are its parameters (i.e. window an
 
 <p float="middle">
   <img src="fig/1_1.png" width="40%" />
-  <img src="1_2.png" width="50%" /> 
+  <img src="fig/1_2.png" width="50%" /> 
 </p>
