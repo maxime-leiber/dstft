@@ -4,7 +4,6 @@ DSTFT is a neural network layer whose weights are its parameters (i.e. window an
 
 
 <p float="left">
-  <img src="/img1.png" width="100" />
-  <img src="/img2.png" width="100" /> 
-  <img src="/img3.png" width="100" />
+  <img src="/1_1.png" width="100" />
+  <img src="/1_2.png" width="100" /> 
 </p>
