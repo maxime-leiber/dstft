@@ -20,3 +20,27 @@ DSTFT is a neural network layer whose weights are its parameters (i.e. window an
   <img src="fig/2_3.png" width="15%" />
   <img src="fig/2_4.png" width="15%" /> 
 </p>
+
+<p float="middle">
+  <img src="fig/5_.png" width="15%" />
+  <img src="fig/5_1.png" width="15%" /> 
+  <img src="fig/5_2.png" width="15%" />
+</p>
+
+<p float="middle">
+  <img src="fig/3_100.png" width="15%" />
+  <img src="fig/3_100b.png" width="15%" /> 
+  <img src="fig/3_1000.png" width="15%" />
+  <img src="fig/3_1000b.png" width="15%" /> 
+  <img src="fig/3_3.png" width="15%" />
+  <img src="fig/3_4.png" width="15%" /> 
+</p>
+
+<p float="middle">
+  <img src="fig/4_100.png" width="15%" />
+  <img src="fig/4_100b.png" width="15%" /> 
+  <img src="fig/4_1000.png" width="15%" />
+  <img src="fig/4_1000b.png" width="15%" /> 
+  <img src="fig/4_3.png" width="15%" />
+  <img src="fig/4_4.png" width="15%" /> 
+</p>
