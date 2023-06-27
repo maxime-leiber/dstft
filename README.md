@@ -44,3 +44,13 @@ DSTFT is a neural network layer whose weights are its parameters (i.e. window an
   <img src="fig/4_3.png" width="15%" />
   <img src="fig/4_4.png" width="15%" /> 
 </p>
+
+
+[![Paper](http://img.shields.io/badge/paper-arxiv-b31b1b.svg)](https://https://arxiv.org/abs/2208.10886)
+[![Conference](http://img.shields.io/badge/ICML-2023-4b44ce)](https://https://icml.cc)
+[![License](https://img.shields.io/badge/License-MIT-green.svg?labelColor=gray)](https://github.com/ymarnissi/Sampling#license)
+![Downloads](https://img.shields.io/github/downloads/ymarnissi/Sampling/total)
+
+[![Python](https://img.shields.io/badge/-Python_3.8-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Pytorch](https://img.shields.io/badge/PyTorch_1.8-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![GPytorch](https://img.shields.io/badge/GPytorch-1.4-blue)](https://gpytorch.ai/)
