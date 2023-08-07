@@ -46,4 +46,4 @@ DSTFT is a neural network layer whose weights are its parameters (i.e. window an
 </p>
 
 
-[![Paper](http://img.shields.io/badge/paper-arxiv-b31b1b.svg)](https://arxiv.org/abs/2208.10886)
+[![Paper](http://img.shields.io/badge/paper-arxiv-b31b1b.svg)](https://arxiv.org/abs/2208.10886) [![Paper](http://img.shields.io/badge/paper-arxiv-b31b1b.svg)]([https://arxiv.org/abs/2208.10886](https://arxiv.org/abs/2308.02418)) [![Paper](http://img.shields.io/badge/paper-arxiv-b31b1b.svg)]([https://arxiv.org/abs/2208.10886](https://arxiv.org/abs/2308.02421)
