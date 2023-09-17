@@ -223,12 +223,15 @@ class DSTFT(nn.Module):
             #elif self.actual_win_length.dim() == 2 and self.actual_win_length.shape[-1] == self.N: 
             #    self.expanded_win_length = self.actual_win_length[:, :, None].expand([self.N, self.N, self.T])          
         
+        mask1 = base.ge(torch.ceil( (self.N-1+self.actual_win_length)/2))
+        mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2)) 
+        
         # calculate the tapering function and its derivate w.r.t. window length
         if self.tapering_function == 'hann' or self.tapering_function == 'hanning':
             if direction == 'forward':
                 self.tap_win = 0.5 - 0.5 * torch.cos(2 * pi * (base + (self.actual_win_length-self.N+1)/2) / self.actual_win_length )                
-                mask1 = base.ge(torch.ceil( (self.N-1+self.actual_win_length)/2))
-                mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2))            
+                #mask1 = base.ge(torch.ceil( (self.N-1+self.actual_win_length)/2))
+                #mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2))            
                 self.tap_win[mask1] = 0
                 self.tap_win[mask2] = 0
                 self.tap_win = self.tap_win / self.tap_win.sum(dim=0, keepdim=True) 
@@ -438,13 +441,23 @@ class FDSTFT(nn.Module):
         return spec, stft, real, imag, phase
     
     def backward(self, x, dl_ds):
-        # Compute the gradient of the loss w.r.t. window length parameter with the chain rule
-        dstft_dp = self.stft(x, 'backward')
-        dl_dp = (torch.conj(dl_ds) * dstft_dp).sum().real #dl_dp = (dl_ds.real * dstft_dp.real + dl_ds.imag * dstft_dp.imag).sum() 
-        print(dl_dp.shape)       
-        dl_dp = dl_dp.unsqueeze(0)
+        # Compute the gradient of the loss w.r.t. window and hop length parameters with the chain rule
+        dl_dwin, dl_dhop = None, None
         
-        return 
+        if self.win_requires_grad == True:
+            dstft_dwin = self.stft(x, 'backward')
+            print(dl_ds.shape, dstft_dwin.shape)
+            dl_dwin = (torch.conj(dl_ds) * dstft_dwin).sum(dim=0)
+            print(dl_dwin.shape)
+            
+            
+            
+            #.sum().real).unsqueeze(0) #dl_dp = (dl_ds.real * dstft_dp.real + dl_ds.imag * dstft_dp.imag).sum() 
+            #print(dl_dp.shape)       
+            print(dl_dwin.shape, self.win_length.shape)
+            if self.win_length.shape is None: win_length_size = (1, 1)
+            elif win_p == 't':  win_length_size = (1, self.T)      
+        return dl_dp
     
     def stft(self, x: torch.tensor, direction: str):
         #batch_size, length, device, dtype = x.shape[0], x.shape[-1], x.device, x.dtype     
@@ -508,12 +521,15 @@ class FDSTFT(nn.Module):
             #elif self.actual_win_length.dim() == 2 and self.actual_win_length.shape[-1] == self.N: 
             #    self.expanded_win_length = self.actual_win_length[:, :, None].expand([self.N, self.N, self.T])          
         
+
         # calculate the tapering function and its derivate w.r.t. window length
+        mask1 = base.ge(torch.ceil( (self.N-1+self.actual_win_length)/2))
+        mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2)) 
         if self.tapering_function == 'hann' or self.tapering_function == 'hanning':
             if direction == 'forward':
                 self.tap_win = 0.5 - 0.5 * torch.cos(2 * pi * (base + (self.actual_win_length-self.N+1)/2) / self.actual_win_length )                
-                mask1 = base.ge(torch.ceil( (self.N-1+self.actual_win_length)/2))
-                mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2))            
+                #mask1 = base.ge(torch.ceil( (self.N-1+self.actual_win_length)/2))
+                #mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2))            
                 self.tap_win[mask1] = 0
                 self.tap_win[mask2] = 0
                 self.tap_win = self.tap_win / self.tap_win.sum(dim=0, keepdim=True) 
