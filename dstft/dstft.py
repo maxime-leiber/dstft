@@ -6,9 +6,6 @@ import torch.nn as nn
 
 
 
-
-
-
 class DSTFT(nn.Module):
     def __init__(self, x,
                     win_length: float,   
@@ -27,6 +24,8 @@ class DSTFT(nn.Module):
                     win_max = None,
                     stride_min = None,
                     stride_max = None,    
+                    pow_min = None,
+                    pow_max = None,    
                     
                     tapering_function: str = 'hann',
                     sr : int = 16_000,
@@ -71,6 +70,10 @@ class DSTFT(nn.Module):
         else: self.stride_min = stride_min        
         if stride_max is None: self.stride_max = max(self.N, abs(stride))
         else: self.stride_max = stride_max
+        if pow_min is None: self.pow_min = .001
+        else: self.pow_min = pow_min        
+        if pow_max is None: self.pow_max = 1000
+        else: self.pow_max = pow_max
         
         # HOP LENGTH / FRAME INDEX
         if stride_transform is None: self.stride_transform = self.__stride_transform
@@ -114,6 +117,10 @@ class DSTFT(nn.Module):
         s_out = torch.minimum(torch.maximum(s_in, torch.full_like(s_in, self.stride_min, dtype=self.dtype, device=self.device)), torch.full_like(s_in, self.stride_max, dtype=self.dtype, device=self.device))
         return s_out 
     
+    def __pow_transform(self, p_in): # born stride entre 0 et 2N 
+        p_out = torch.minimum(torch.maximum(p_in, torch.full_like(p_in, self.pow_min, dtype=self.dtype, device=self.device)), torch.full_like(p_in, self.pow_max, dtype=self.dtype, device=self.device))
+        return p_out 
+    
     @property 
     def actual_win_length(self): # contraints
         return self.window_transform(self.win_length)
@@ -121,6 +128,10 @@ class DSTFT(nn.Module):
     @property 
     def actual_strides(self): # stride contraints, actual stride between frames
         return self.stride_transform(self.strides)
+    
+    @property 
+    def actual_pow(self): # pow contraints
+        return self.pow_transform(self.win_pow)
     
     @property
     def frames(self):
@@ -175,10 +186,10 @@ class DSTFT(nn.Module):
         #print("shift", shift.shape)
         
         # Compute tapered x
-        strided_x = strided_x[:, :, None, :] # B, T, 1, N
+        self.strided_x = strided_x[:, :, None, :] # B, T, 1, N
         self.tap_win = self.tap_win[None, :, :, :] # 1, T, N, 1
         shift = torch.exp( 2j * pi * shift / self.N)[None, :, :, None] # 1, T, N, 1
-        tapered_x = strided_x * self.tap_win * shift # B, T, N, N
+        self.tapered_x = self.strided_x * self.tap_win * shift # B, T, N, N
         #print("tapered_x", tapered_x.shape)
         
         # Generate Fourier coefficients    
@@ -189,7 +200,7 @@ class DSTFT(nn.Module):
         
         # Perform the STFT
         coeff = coeff[None, None, :, :]  # 1, 1, N, N     
-        stft = (tapered_x * coeff).sum(dim=-1)  # B, T, N        #stft = torch.einsum('...ij,...jk->...ik', tapered_x, coeff)
+        stft = (self.tapered_x * coeff).sum(dim=-1)  # B, T, N        #stft = torch.einsum('...ij,...jk->...ik', tapered_x, coeff)
         #print("stft", stft.shape)
         stft = stft.permute(0, 2, 1)         # B, N, T           #stft = stft.transpose(-1, -2)  
 
@@ -234,6 +245,7 @@ class DSTFT(nn.Module):
                 #mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2))            
                 self.tap_win[mask1] = 0
                 self.tap_win[mask2] = 0
+                #self.tap_win =self.tap_win.pow(self.actual_pow)
                 self.tap_win = self.tap_win / self.tap_win.sum(dim=0, keepdim=True) 
                 return self.tap_win.pow(self.win_pow)
             
@@ -258,8 +270,8 @@ class DSTFT(nn.Module):
         cov /= self.L
         return cov
 
-    def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False):
-        plt.figure()
+    def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False, figsize=(6.4, 4.8)):
+        plt.figure(figsize=figsize)
         plt.title('Spectrogram')
         ax = plt.subplot()
         im = ax.imshow(spec[0].detach().cpu().log(), aspect='auto', origin='lower', cmap='jet', extent=[0,spec.shape[-1], 0, spec.shape[-2]])
@@ -269,7 +281,7 @@ class DSTFT(nn.Module):
         plt.show()
 
         if weights == True:
-            plt.figure()
+            plt.figure(figsize=figsize)
             plt.title('Distribution of window lengths')
             ax = plt.subplot()
             im = ax.imshow(self.actual_win_length[:self.F].detach().cpu(), aspect='auto', origin='lower', cmap='jet')
@@ -281,7 +293,7 @@ class DSTFT(nn.Module):
             plt.show()   
 
         if self.tap_win is not None and wins == True:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=figsize)
             ax.plot(self.T + .5 + x.squeeze().cpu().numpy(), linewidth=1,)
             for i, start in enumerate(self.frames.detach().cpu()):
                 ax.plot(range(int(start.floor().item()), int(start.floor().item()+self.N)), self.T-i-1.3 + 150 * self.tap_win[:, i, :, :].mean(dim=1).squeeze().detach().cpu(), c='#1f77b4')
@@ -471,14 +483,14 @@ class FDSTFT(nn.Module):
         #print("tap_win", self.tap_win.shape)
         
         # Compute tapered x
-        strided_x = strided_x[:, :, :] # B, T, N
+        self.strided_x = strided_x[:, :, :] # B, T, N
         self.tap_win = self.tap_win[None, :, :] # 1, T, 1
         
-        tapered_x = strided_x * self.tap_win #B, T, N,
+        self.tapered_x = self.strided_x * self.tap_win #B, T, N,
         #print("tapered_x", tapered_x.shape)
         
         #print(tapered_x.shape)
-        spectr = torch.fft.fft(tapered_x) # B, T, N
+        spectr = torch.fft.fft(self.tapered_x) # B, T, N
         #print("spectrum", spectr.shape)
         
         #print(spectr.shape)
@@ -556,18 +568,23 @@ class FDSTFT(nn.Module):
         cov /= self.L
         return cov
 
-    def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False):
-        plt.figure()
+    def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False, figsize=(6.4, 4.8), f_hat=None, fs=None):
+        plt.figure(figsize=figsize)
         plt.title('Spectrogram')
         ax = plt.subplot()
-        im = ax.imshow(spec[0].detach().cpu().log(), aspect='auto', origin='lower', cmap='jet', extent=[0,spec.shape[-1], 0, spec.shape[-2]])
+        if fs is None: f_max = spec.shape[-2]
+        else: f_max = fs / 2
+        im = ax.imshow(spec[0].detach().cpu().log(), aspect='auto', origin='lower', cmap='jet', extent=[0, spec.shape[-1], 0, f_max])
         plt.ylabel('frequencies')
         plt.xlabel('frames')
         if bar == True: plt.colorbar(im, ax=ax)
+        if f_hat is not None:
+            for f in f_hat:
+                plt.plot(f, linewidth=.5, c='k', alpha=0.7)
         plt.show()
 
         if weights == True:
-            plt.figure()
+            plt.figure(figsize=figsize)
             plt.title('Distribution of window lengths')
             ax = plt.subplot()
             im = ax.imshow(self.actual_win_length[:self.F].detach().cpu(), aspect='auto', origin='lower', cmap='jet')
@@ -579,7 +596,7 @@ class FDSTFT(nn.Module):
             plt.show()   
 
         if self.tap_win is not None and wins == True:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=figsize)
             ax.plot(self.T + .5 + x.squeeze().cpu().numpy(), linewidth=1,)
             for i, start in enumerate(self.frames.detach().cpu()):
                 ax.plot(range(int(start.floor().item()), int(start.floor().item()+self.N)), self.T-i-1.3 + 150 * self.tap_win[:, i, :].squeeze().detach().cpu(), c='#1f77b4')
