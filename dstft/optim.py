@@ -15,6 +15,7 @@ from torch.autograd import Variable
 
 from dstft.loss import kurtosis_loss
 
+
 class MinNormSolver:
     """ for Multi Objective Optimization
         taken from https://github.com/isl-org/MultiObjectiveOptimization
@@ -41,7 +42,7 @@ class MinNormSolver:
             cost = v2v2
             return gamma, cost
         # Case: Fig 1, second column
-        gamma = -1.0 * ( (v1v2 - v2v2) / (v1v1+v2v2 - 2*v1v2) )
+        gamma = -1.0 * ((v1v2 - v2v2) / (v1v1+v2v2 - 2*v1v2))
         cost = v2v2 + gamma*(v1v2 - v2v2)
         return gamma, cost
 
@@ -53,24 +54,28 @@ class MinNormSolver:
         """
         dmin = 1e8
         for i in range(len(vecs)):
-            for j in range(i+1,len(vecs)):
-                if (i,j) not in dps:
+            for j in range(i+1, len(vecs)):
+                if (i, j) not in dps:
                     dps[(i, j)] = 0.0
                     for k in range(len(vecs[i])):
-                        dps[(i,j)] += torch.mul(vecs[i][k], vecs[j][k]).sum().data.cpu()
+                        dps[(i, j)] += torch.mul(vecs[i][k],
+                                                 vecs[j][k]).sum().data.cpu()
                     dps[(j, i)] = dps[(i, j)]
-                if (i,i) not in dps:
+                if (i, i) not in dps:
                     dps[(i, i)] = 0.0
                     for k in range(len(vecs[i])):
-                        dps[(i,i)] += torch.mul(vecs[i][k], vecs[i][k]).sum().data.cpu()
-                if (j,j) not in dps:
-                    dps[(j, j)] = 0.0   
+                        dps[(i, i)] += torch.mul(vecs[i][k],
+                                                 vecs[i][k]).sum().data.cpu()
+                if (j, j) not in dps:
+                    dps[(j, j)] = 0.0
                     for k in range(len(vecs[i])):
-                        dps[(j, j)] += torch.mul(vecs[j][k], vecs[j][k]).sum().data.cpu()
-                c,d = MinNormSolver._min_norm_element_from2(dps[(i,i)], dps[(i,j)], dps[(j,j)])
+                        dps[(j, j)] += torch.mul(vecs[j][k],
+                                                 vecs[j][k]).sum().data.cpu()
+                c, d = MinNormSolver._min_norm_element_from2(
+                    dps[(i, i)], dps[(i, j)], dps[(j, j)])
                 if d < dmin:
                     dmin = d
-                    sol = [(i,j),c,d]
+                    sol = [(i, j), c, d]
         return sol, dps
 
     def _projection2simplex(y):
@@ -82,24 +87,24 @@ class MinNormSolver:
         tmpsum = 0.0
         tmax_f = (np.sum(y) - 1.0)/m
         for i in range(m-1):
-            tmpsum+= sorted_y[i]
-            tmax = (tmpsum - 1)/ (i+1.0)
+            tmpsum += sorted_y[i]
+            tmax = (tmpsum - 1) / (i+1.0)
             if tmax > sorted_y[i+1]:
                 tmax_f = tmax
                 break
         return np.maximum(y - tmax_f, np.zeros(y.shape))
-    
+
     def _next_point(cur_val, grad, n):
-        proj_grad = grad - ( np.sum(grad) / n )
-        tm1 = -1.0*cur_val[proj_grad<0]/proj_grad[proj_grad<0]
-        tm2 = (1.0 - cur_val[proj_grad>0])/(proj_grad[proj_grad>0])
-        
-        skippers = np.sum(tm1<1e-7) + np.sum(tm2<1e-7)
+        proj_grad = grad - (np.sum(grad) / n)
+        tm1 = -1.0*cur_val[proj_grad < 0]/proj_grad[proj_grad < 0]
+        tm2 = (1.0 - cur_val[proj_grad > 0])/(proj_grad[proj_grad > 0])
+
+        skippers = np.sum(tm1 < 1e-7) + np.sum(tm2 < 1e-7)
         t = 1
-        if len(tm1[tm1>1e-7]) > 0:
-            t = np.min(tm1[tm1>1e-7])
-        if len(tm2[tm2>1e-7]) > 0:
-            t = min(t, np.min(tm2[tm2>1e-7]))
+        if len(tm1[tm1 > 1e-7]) > 0:
+            t = np.min(tm1[tm1 > 1e-7])
+        if len(tm2[tm2 > 1e-7]) > 0:
+            t = min(t, np.min(tm2[tm2 > 1e-7]))
 
         next_point = proj_grad*t + cur_val
         next_point = MinNormSolver._projection2simplex(next_point)
@@ -115,23 +120,22 @@ class MinNormSolver:
         # Solution lying at the combination of two points
         dps = {}
         init_sol, dps = MinNormSolver._min_norm_2d(vecs, dps)
-        
-        n=len(vecs)
+
+        n = len(vecs)
         sol_vec = np.zeros(n)
         sol_vec[init_sol[0][0]] = init_sol[1]
         sol_vec[init_sol[0][1]] = 1 - init_sol[1]
 
         if n < 3:
             # This is optimal for n=2, so return the solution
-            return sol_vec , init_sol[2]
-    
+            return sol_vec, init_sol[2]
+
         iter_count = 0
 
-        grad_mat = np.zeros((n,n))
+        grad_mat = np.zeros((n, n))
         for i in range(n):
             for j in range(n):
-                grad_mat[i,j] = dps[(i, j)]
-                
+                grad_mat[i, j] = dps[(i, j)]
 
         while iter_count < MinNormSolver.MAX_ITER:
             grad_dir = -1.0*np.dot(grad_mat, sol_vec)
@@ -142,9 +146,9 @@ class MinNormSolver:
             v2v2 = 0.0
             for i in range(n):
                 for j in range(n):
-                    v1v1 += sol_vec[i]*sol_vec[j]*dps[(i,j)]
-                    v1v2 += sol_vec[i]*new_point[j]*dps[(i,j)]
-                    v2v2 += new_point[i]*new_point[j]*dps[(i,j)]
+                    v1v1 += sol_vec[i]*sol_vec[j]*dps[(i, j)]
+                    v1v2 += sol_vec[i]*new_point[j]*dps[(i, j)]
+                    v2v2 += new_point[i]*new_point[j]*dps[(i, j)]
             nc, nd = MinNormSolver._min_norm_element_from2(v1v1, v1v2, v2v2)
             new_sol_vec = nc*sol_vec + (1-nc)*new_point
             change = new_sol_vec - sol_vec
@@ -163,21 +167,21 @@ class MinNormSolver:
         dps = {}
         init_sol, dps = MinNormSolver._min_norm_2d(vecs, dps)
 
-        n=len(vecs)
+        n = len(vecs)
         sol_vec = np.zeros(n)
         sol_vec[init_sol[0][0]] = init_sol[1]
         sol_vec[init_sol[0][1]] = 1 - init_sol[1]
 
         if n < 3:
             # This is optimal for n=2, so return the solution
-            return sol_vec , init_sol[2]
+            return sol_vec, init_sol[2]
 
         iter_count = 0
 
-        grad_mat = np.zeros((n,n))
+        grad_mat = np.zeros((n, n))
         for i in range(n):
             for j in range(n):
-                grad_mat[i,j] = dps[(i, j)]
+                grad_mat[i, j] = dps[(i, j)]
 
         while iter_count < MinNormSolver.MAX_ITER:
             t_iter = np.argmin(np.dot(grad_mat, sol_vec))
@@ -200,13 +204,16 @@ def gradient_normalizers(grads, losses, normalization_type):
     gn = {}
     if normalization_type == 'l2':
         for t in grads:
-            gn[t] = np.sqrt(np.sum([gr.pow(2).sum().data.cpu() for gr in grads[t]]))
+            gn[t] = np.sqrt(np.sum([gr.pow(2).sum().data.cpu()
+                            for gr in grads[t]]))
     elif normalization_type == 'loss':
         for t in grads:
             gn[t] = losses[t]
     elif normalization_type == 'loss+':
         for t in grads:
-            gn[t] = losses[t] * np.sqrt(np.sum([gr.pow(2).sum().data.cpu() for gr in grads[t]]))
+            gn[t] = losses[t] * \
+                np.sqrt(np.sum([gr.pow(2).sum().data.cpu()
+                        for gr in grads[t]]))
     elif normalization_type == 'none':
         for t in grads:
             gn[t] = 1.0
@@ -215,80 +222,76 @@ def gradient_normalizers(grads, losses, normalization_type):
     return gn
 
 
-
-
 # Scaling the loss functions based on the algorithm choice
 def scale_loss(dstft, x, lossa, lossb):
     grads = {}
     loss_data = {}
     scale = {}
     tasks = ['loss1', 'loss2']
-    params = [ {'params': dstft.parameters()}]
+    params = [{'params': dstft.parameters()}]
     optimizer = torch.optim.Adam(params)
-    
-    
-    # Compute gradients wrt to loss1 
+
+    # Compute gradients wrt to loss1
     optimizer.zero_grad()
-    spec, *_ = dstft(x)    
+    spec, *_ = dstft(x)
     loss1 = lossa(spec, dstft)
     loss_data['loss1'] = loss1.data
     loss1.backward()
-    
+
     grads['loss1'] = []
     for param in dstft.parameters():
         if param.grad is not None:
-                grads['loss1'].append(Variable(param.grad.data.clone(), requires_grad=False))
-    
-    # Compute gradients wrt to loss2 
+            grads['loss1'].append(
+                Variable(param.grad.data.clone(), requires_grad=False))
+
+    # Compute gradients wrt to loss2
     optimizer.zero_grad()
-    spec, *_ = dstft(x)  
+    spec, *_ = dstft(x)
     loss2 = lossb(dstft)
     loss_data['loss2'] = loss2.data
     loss2.backward()
-    
+
     grads['loss2'] = []
     for param in dstft.parameters():
         if param.grad is not None:
-                grads['loss2'].append(Variable(param.grad.data.clone(), requires_grad=False))
-                
-    
-    
-    # Normalize all gradients     
-    
+            grads['loss2'].append(
+                Variable(param.grad.data.clone(), requires_grad=False))
+
+    # Normalize all gradients
+
     my_tasks = copy.deepcopy(tasks)
     removed_tasks = []
     my_grads = {}
     my_loss_data = {}
-    
+
     for t in tasks:
-        if (loss_data[t] <=1e-6):
+        if (loss_data[t] <= 1e-6):
             my_tasks.remove(t)
             removed_tasks.append(t)
         else:
             my_grads[t] = grads[t]
             my_loss_data[t] = loss_data[t]
-    
-    if len(my_tasks)>1:
+
+    if len(my_tasks) > 1:
         gn = gradient_normalizers(my_grads, my_loss_data, 'loss+')
 
         for t in my_tasks:
             for gr_i in range(len(my_grads[t])):
                 my_grads[t][gr_i] = my_grads[t][gr_i] / gn[t]
 
-                
         # Frank-Wolfe iteration to compute scales.
-        sol, min_norm =  MinNormSolver.find_min_norm_element([my_grads[t] for t in my_tasks])
-    
+        sol, min_norm = MinNormSolver.find_min_norm_element(
+            [my_grads[t] for t in my_tasks])
+
         for i, t in enumerate(my_tasks):
             scale[t] = float(sol[i])
-            
-        
-    else: # Only one task
-        
+
+    else:  # Only one task
+
         for i, t in enumerate(my_tasks):
             scale[t] = 1.0
 
     for i, t in enumerate(removed_tasks):
-            scale[t] = 0.0
-            
+        scale[t] = 0.0
+
     return scale

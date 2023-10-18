@@ -1,9 +1,11 @@
-import torch
 import math
+
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 
 from dstft import FDSTFT
+
 
 def dynamic_programming(Prob, Prior): 
     # Probability map
@@ -38,7 +40,7 @@ def dynamic_programming(Prob, Prior):
     ranking = torch.argsort(final_scores)
 
     # Back propagation
-    best = torch.argmin(final_scores)
+    #best = torch.argmin(final_scores)
     best_indices = torch.zeros(NbTraj, Tmax, dtype=int)
     best_indices[:, -1] = ranking[:NbTraj]
     for ii in range(NbTraj):
@@ -48,7 +50,7 @@ def dynamic_programming(Prob, Prior):
     return best_indices[0]
 
 
-def frequency_tracking(y, fs, spec, fmin, fmax, alpha, orders): 
+def frequency_tracking(y, fs, spec, fmin, fmax, alpha, orders=[]): 
     # alpha est un paramétre de smoothness en Hz/s 
     fmin = fmin/fs
     fmax = fmax/fs
@@ -58,23 +60,22 @@ def frequency_tracking(y, fs, spec, fmin, fmax, alpha, orders):
     T = spec.shape[1]
     df = fs/2/L
     dt = y.shape[0]/(fs*T)
-    
+
     # Compute prob
     spec_db = torch.log(spec)
     spec_db = spec_db-spec_db.min()
 
-    freqs = torch.linspace(0, 0.5, spec.shape[0])
+    freqs = torch.linspace(0, 0.5, spec.shape[0], device=y.device)
     # Compute probablity in [fmin, fmax]
     Prob = torch.zeros_like(spec_db)
-    Prob[(freqs>=fmin) & (freqs<=fmax)] = spec_db[(freqs>=fmin) & (freqs<=fmax)]
-    
+    Prob[(freqs >= fmin) & (freqs <= fmax)] = spec_db[(freqs >= fmin) & (freqs <= fmax)]
     
     # Take account of harmonics 
     for o in orders:
         Po = torch.ones_like(Prob)
-        idx = torch.arange(0, spec.shape[0])[(freqs>=fmin) & (freqs<=fmax)]
+        idx = torch.arange(0, spec.shape[0], device=y.device)[(freqs >= fmin) & (freqs <= fmax)]
         order_idx = torch.ceil(o*idx).long()
-        Po[idx[order_idx<L]] = spec_db[order_idx[order_idx<L]]
+        Po[idx[order_idx < L]] = spec_db[order_idx[order_idx < L]]
         Prob = Prob*Po
         
     # Normalize probability
@@ -83,15 +84,13 @@ def frequency_tracking(y, fs, spec, fmin, fmax, alpha, orders):
     Prob = Prob / epsilon
     
     # Add priors for smoothness
-    sigma = alpha*torch.ones(Prob.shape[1])*dt
-    freqs_centred = torch.arange(-L/2, L/2)*df
+    sigma = alpha*torch.ones(Prob.shape[1], device=y.device)*dt
+    freqs_centred = torch.arange(-L/2, L/2, device=y.device)*df
     
     Prior = 0.5*(freqs_centred.repeat(T, 1).T/sigma.repeat(L, 1))**2 - torch.log(np.sqrt(2 * math.pi) * sigma.repeat(L, 1))
-    
-    out = dynamic_programming(Prob, Prior)
+    out = dynamic_programming(Prob.squeeze(), Prior)
     #print((out[None, None, ...]*df).shape)
-    
-    
+        
     # Estimated frequency
     fest = torch.nn.functional.interpolate((out*df)[None, None, None, ...], size=y.shape[-1], mode='bicubic')
     
@@ -100,6 +99,8 @@ def frequency_tracking(y, fs, spec, fmin, fmax, alpha, orders):
 
 if __name__ == '__main__':
     from math import pi
+    torch.manual_seed(1802)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # Signal
     N = 50_000
     num_harmoniques = 3
@@ -107,12 +108,13 @@ if __name__ == '__main__':
     fs = 1
     
     T = torch.arange(0, N)/fs
-    f =  torch.linspace(0.01, 0.15, N)
+    f = torch.linspace(0.01, 0.15, N)
     x = 0
     
     for i in range(num_harmoniques):  
-        x += torch.randn(1)*torch.sin(2*(i+1)*math.pi*torch.cumsum(f, dim=0)/fs)
-    x = x[None, ...] + torch.randn(N)
+        x += 1/(i+1)*torch.sin(2*(i+1)*pi*torch.cumsum(f, dim=0)/fs)
+    x = x[None, ...] + 2*torch.randn(N)    
+    x = x.to(device)
     
     dstft = FDSTFT(x, win_length=1_000, support=1_000, stride=100, win_requires_grad=False, stride_requires_grad=False, win_p=None, stride_p=None)
     spec, *_ = dstft(x)
@@ -120,7 +122,7 @@ if __name__ == '__main__':
     plt.figure()
     plt.title('Spectrogram')
     ax = plt.subplot()
-    im = ax.imshow(spec.detach().cpu().log(), aspect='auto', origin='lower', cmap='viridis', extent=[0,spec.shape[-1], 0, spec.shape[-2]])
+    im = ax.imshow(spec.detach().cpu().log(), aspect='auto', origin='lower', cmap='viridis', extent=[0, spec.shape[-1], 0, spec.shape[-2]])
     plt.ylabel('frequencies')
     plt.xlabel('frames')
     plt.colorbar(im, ax=ax)
@@ -129,6 +131,7 @@ if __name__ == '__main__':
     # alpha => il décrit le taux variation de la fréquence /s
     # Un grande valeur=> ça varie fortement
     # Pour une fréquence constante alpha=>0
+    print(x.shape, spec.shape)
     f_hat, out = frequency_tracking(y=x, fs=fs, spec=spec, fmin=0, fmax=.25, alpha=100)
     
     plt.figure()
