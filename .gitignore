@@ -161,4 +161,4 @@ cython_debug/
 
 files/
 files/*
-notebook/0_.ipynb
+notebooks/0_.ipynb
