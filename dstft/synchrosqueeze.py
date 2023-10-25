@@ -19,7 +19,8 @@ def fast_sst(X, dT, Nv, Nt, gamma, device):
             if torch.abs(X[eta, b]) >= gamma[b]:
                 k = torch.argmin(torch.abs(F - omega[eta, b]))
                 Z_Ts[eta, b] = Z_Ts[eta, b] + torch.mean(X[k, b])
-    Z_Ts = 10*Z_Ts.abs()[:len(Z_Ts)//2]
+
+    Z_Ts = 10*Z_Ts.abs()[:len(Z_Ts)//2+1]
     Z_Ts[Z_Ts == 0] = Z_Ts[Z_Ts > 0].min()/2
 
     return Z_Ts

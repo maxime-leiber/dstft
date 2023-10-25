@@ -207,8 +207,11 @@ class DSTFT(nn.Module):
         # Compute the gradient of the loss w.r.t. window length parameter with the chain rule
         dstft_dp = self.stft(x, 'backward')
         # dl_dp = (dl_ds.real * dstft_dp.real + dl_ds.imag * dstft_dp.imag).sum()
-        dl_dp = (torch.conj(dl_ds) * dstft_dp).sum().real
-        return dl_dp.unsqueeze(0)
+        dl_dp = (torch.conj(dl_ds) * dstft_dp)
+        #print('dl_dp', dl_dp.shape, self.win_length.shape)
+        dl_dp = dl_dp.sum().real.expand(self.win_length.shape)
+        #print('dl_dp', dl_dp.shape, self.win_length.shape)
+        return dl_dp
 
     def stft(self, x: torch.tensor, direction: str):
         # batch_size, length, device, dtype = x.shape[0], x.shape[-1], x.device, x.dtype
@@ -296,18 +299,20 @@ class DSTFT(nn.Module):
                 # mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2))
                 self.tap_win[mask1] = 0
                 self.tap_win[mask2] = 0
-                # self.tap_win =self.tap_win.pow(self.actual_pow)
-                self.tap_win = self.tap_win / \
-                    self.tap_win.sum(dim=0, keepdim=True)
-                return self.tap_win.pow(self.win_pow)
+                #self.tap_win = self.tap_win.pow(self.actual_pow)
+                self.tap_win = self.tap_win / self.N * 2
+                return self.tap_win
 
             elif direction == 'backward':
-                f = torch.sin(2 * pi * (base - (self.N-1)/2) /
-                              self.actual_win_length)
-                d_tap_win = - pi / self.actual_win_length * \
+                #f = torch.sin(2 * pi * (base - (self.N-1)/2) /
+                #             self.actual_win_length)
+                f = torch.sin(
+                        2 * pi * (base + (self.actual_win_length-self.N+1)/2) / self.actual_win_length)
+                d_tap_win = - pi / self.actual_win_length.pow(2) * \
                     ((self.N-1)/2 - base) * f
                 d_tap_win[mask1] = 0
                 d_tap_win[mask2] = 0
+                d_tap_win = d_tap_win / self.N * 2
                 return d_tap_win
 
     def coverage(self):  # in [0, 1]
@@ -541,22 +546,13 @@ class FDSTFT(nn.Module):
         return spec, stft, real, imag, phase
 
     def backward(self, x, dl_ds):
-        # Compute the gradient of the loss w.r.t. window and hop length parameters with the chain rule
-        dl_dwin, dl_dhop = None, None
-
-        if self.win_requires_grad == True:
-            dstft_dwin = self.stft(x, 'backward')
-            print(dl_ds.shape, dstft_dwin.shape)
-            dl_dwin = (torch.conj(dl_ds) * dstft_dwin).sum(dim=0)
-            print(dl_dwin.shape)
-
-            # .sum().real).unsqueeze(0) #dl_dp = (dl_ds.real * dstft_dp.real + dl_ds.imag * dstft_dp.imag).sum()
-            # print(dl_dp.shape)
-            print(dl_dwin.shape, self.win_length.shape)
-            if self.win_length.shape is None:
-                win_length_size = (1, 1)
-            elif win_p == 't':
-                win_length_size = (1, self.T)
+        # Compute the gradient of the loss w.r.t. window length parameter with the chain rule
+        dstft_dp = self.stft(x, 'backward')
+        # dl_dp = (dl_ds.real * dstft_dp.real + dl_ds.imag * dstft_dp.imag).sum()
+        dl_dp = (torch.conj(dl_ds) * dstft_dp)
+        #print('dl_dp', dl_dp.shape, self.win_length.shape)
+        dl_dp = dl_dp.sum().real.expand(self.win_length.shape)
+        #print('dl_dp', dl_dp.shape, self.win_length.shape)
         return dl_dp
 
     def stft(self, x: torch.tensor, direction: str):
@@ -643,12 +639,15 @@ class FDSTFT(nn.Module):
                 return self.tap_win.pow(self.win_pow)
 
             elif direction == 'backward':
-                f = torch.sin(2 * pi * (base - (self.N-1)/2) /
-                              self.actual_win_length)
-                d_tap_win = - pi / self.actual_win_length * \
+                #f = torch.sin(2 * pi * (base - (self.N-1)/2) /
+                #             self.actual_win_length)
+                f = torch.sin(
+                        2 * pi * (base + (self.actual_win_length-self.N+1)/2) / self.actual_win_length)
+                d_tap_win = - pi / self.actual_win_length.pow(2) * \
                     ((self.N-1)/2 - base) * f
                 d_tap_win[mask1] = 0
                 d_tap_win[mask2] = 0
+                d_tap_win = d_tap_win / self.N * 2
                 return d_tap_win
 
     def coverage(self):  # in [0, 1]
