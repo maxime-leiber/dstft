@@ -6,34 +6,33 @@ import torch.nn as nn
 
 
 class DSTFT(nn.Module):
-    def __init__(
-        self,
-        x,
-        win_length: float,
-        support: int,
-        stride: int,
-        pow: float = 1.0,
-        win_pow: float = 1.0,
-        win_p: str = None,
-        stride_p: str = None,
-        pow_p: str = None,
-        win_requires_grad: bool = True,
-        stride_requires_grad: bool = True,
-        pow_requires_grad: bool = False,
-        # params: str = 'p_tf', # p, p_t, p_f, p_tf
-        win_min=None,
-        win_max=None,
-        stride_min=None,
-        stride_max=None,
-        pow_min=None,
-        pow_max=None,
-        tapering_function: str = 'hann',
-        sr: int = 16_000,
-        window_transform=None,
-        stride_transform=None,
-        dynamic_parameter: bool = False,
-        first_frame: bool = False,
-    ):
+    def __init__(self, x,
+                 win_length: float,
+                 support: int,
+                 stride: int,
+                 pow: float = 1.0,
+                 win_pow: float = 1.0,
+                 win_p: str = None,
+                 stride_p: str = None,
+                 pow_p: str = None,
+                 win_requires_grad: bool = True,
+                 stride_requires_grad: bool = True,
+                 pow_requires_grad: bool = False,
+                 # params: str = 'p_tf', # p, p_t, p_f, p_tf
+                 win_min=None,
+                 win_max=None,
+                 stride_min=None,
+                 stride_max=None,
+                 pow_min=None,
+                 pow_max=None,
+
+                 tapering_function: str = 'hann',
+                 sr: int = 16_000,
+                 window_transform=None,
+                 stride_transform=None,
+                 dynamic_parameter: bool = False,
+                 first_frame: bool = False,
+                 ):
         super(DSTFT, self).__init__()
 
         # Constants and hyperparameters
@@ -66,7 +65,7 @@ class DSTFT(nn.Module):
         # self.T = int(1 + torch.div(self.L - self.N/2 , stride, rounding_mode='floor'))
 
         if win_min is None:
-            self.win_min = self.N / 20
+            self.win_min = self.N / 20  # 0
         else:
             self.win_min = win_min
         if win_max is None:
@@ -120,9 +119,9 @@ class DSTFT(nn.Module):
         elif win_p == 't':
             win_length_size = (1, self.T)
         elif win_p == 'f':
-            win_length_size = (self.N, 1)
+            win_length_size = (self.F, 1)
         elif win_p == 'tf':
-            win_length_size = (self.N, self.T)
+            win_length_size = (self.F, self.T)
         else:
             raise ValueError(f"win_p error {win_p}")
         # Create the window length parameter and assign it the appropriate shape
@@ -135,9 +134,9 @@ class DSTFT(nn.Module):
         elif pow_p == 't':
             win_pow_size = (1, self.T)
         elif pow_p == 'f':
-            win_pow_size = (self.N, 1)
+            win_pow_size = (self.F, 1)
         elif pow_p == 'tf':
-            win_pow_size = (self.N, self.T)
+            win_pow_size = (self.F, self.T)
         else:
             print('pow_p error', pow_p)
         self.win_pow = nn.Parameter(torch.full(win_pow_size, abs(
@@ -176,7 +175,7 @@ class DSTFT(nn.Module):
         expanded_stride = self.actual_strides.expand((self.T,))
         frames = torch.zeros_like(expanded_stride)
         if self.first_frame:
-            frames[0] = (self.actual_win_length.expand((self.N, self.T))[
+            frames[0] = (self.actual_win_length.expand((self.F, self.T))[
                          :, 0].max(dim=0, keepdim=False)[0] - self.N)/2
         frames[1:] = frames[0] + expanded_stride[1:].cumsum(dim=0)
 
@@ -198,59 +197,56 @@ class DSTFT(nn.Module):
     def forward(self, x):
         # Perform the forward STFT and extract the magnitude, phase, real, and imaginary parts
         stft = self.stft(x, 'forward')
-        real, imag, spec, phase = stft.real, stft.imag, stft.abs().pow(
-            self.pow)[:, :self.F], stft.angle()[:, :self.F]
-        spec = spec + torch.finfo(x.dtype).eps
-        return spec, stft, real, imag, phase
+        #real, imag, spec, phase = stft.real, stft.imag, stft.abs().pow(
+        #    self.pow)[:, :self.F], stft.angle()[:, :self.F]
+        spec = (stft + torch.finfo(x.dtype).eps).abs().pow(self.pow)[:, :self.F]
+        return spec, stft#, real, imag, phase
 
     def backward(self, x, dl_ds):
         # Compute the gradient of the loss w.r.t. window length parameter with the chain rule
         dstft_dp = self.stft(x, 'backward')
         # dl_dp = (dl_ds.real * dstft_dp.real + dl_ds.imag * dstft_dp.imag).sum()
-        dl_dp = (torch.conj(dl_ds) * dstft_dp)
-        #print('dl_dp', dl_dp.shape, self.win_length.shape)
-        dl_dp = dl_dp.sum().real.expand(self.win_length.shape)
-        #print('dl_dp', dl_dp.shape, self.win_length.shape)
-        return dl_dp
+        dl_dp = (torch.conj(dl_ds) * dstft_dp).sum().real
+        return dl_dp.unsqueeze(0)
 
     def stft(self, x: torch.tensor, direction: str):
         # batch_size, length, device, dtype = x.shape[0], x.shape[-1], x.device, x.dtype
 
         # Generate strided signal and shift idx_frac
         strided_x, idx_frac = self.stride(x)  # B, T, N; T
-        # print("strided_x", strided_x.shape)
+        #print("strided_x", strided_x.shape)
 
         # Generate the tapering window function for the STFT
         self.tap_win = self.window_function(
             direction=direction, idx_frac=idx_frac).permute(2, 1, 0)  # T, N, N
-        # print("tap_win", self.tap_win.shape)
+        #print("tap_win", self.tap_win.shape)
 
         # Generate tapering function shift
-        shift = torch.arange(end=self.N, device=self.device,
+        shift = torch.arange(end=self.F, device=self.device,
                              dtype=self.dtype, requires_grad=False)
         shift = idx_frac[:, None] * shift[None, :]  # T, N
-        # print("shift", shift.shape)
+        #print("shift", shift.shape)
 
         # Compute tapered x
         self.strided_x = strided_x[:, :, None, :]  # B, T, 1, N
         self.tap_win = self.tap_win[None, :, :, :]  # 1, T, N, 1
         shift = torch.exp(2j * pi * shift /
                           self.N)[None, :, :, None]  # 1, T, N, 1
-        self.tapered_x = self.strided_x * self.tap_win * shift  # B, T, N, N
-        # print("tapered_x", tapered_x.shape)
+        self.tapered_x = self.strided_x * self.tap_win * shift  # B, T, F, N
+        #print("tapered_x", self.tapered_x.shape)
 
         # Generate Fourier coefficients
         coeff = torch.arange(end=self.N, device=self.device,
                              dtype=self.dtype, requires_grad=False)
-        coeff = coeff[:, None] @ coeff[None, :]
-        coeff = torch.exp(- 2j * pi * coeff / self.N)  # N, N
-        # print("coeff", coeff.shape)
+        coeff = coeff[:self.F, None] @ coeff[None, :]
+        coeff = torch.exp(- 2j * pi * coeff / self.N)  # F, N
+        #print("coeff", coeff.shape)
 
         # Perform the STFT
         coeff = coeff[None, None, :, :]  # 1, 1, N, N
         # B, T, N        #stft = torch.einsum('...ij,...jk->...ik', tapered_x, coeff)
         stft = (self.tapered_x * coeff).sum(dim=-1)
-        # print("stft", stft.shape)
+        #print("stft", stft.shape)
         # B, N, T           #stft = stft.transpose(-1, -2)
         stft = stft.permute(0, 2, 1)
 
@@ -258,10 +254,12 @@ class DSTFT(nn.Module):
 
     def stride(self, x) -> torch.tensor:
         # frames index and strided x
+        #print('frames', self.frames.shape)
         idx_floor = self.frames.floor()
         idx_frac = self.frames - idx_floor
         idx_floor = idx_floor.long()[:, None].expand(
             (self.T, self.N)) + torch.arange(0, self.N, device=self.device)
+        #print('idx', idx_floor.shape)
         idx_floor[idx_floor >= self.L] = -1
         strided_x = x[:, idx_floor]
         strided_x[:, idx_floor < 0] = 0
@@ -274,7 +272,7 @@ class DSTFT(nn.Module):
         else:
             # Create an array of indices to use as the base for the window function
             base = torch.arange(0, self.N, 1, dtype=self.dtype, device=self.device)[
-                :, None, None].expand([-1, self.N, self.T])
+                :, None, None].expand([-1, self.F, self.T])
             base = base - idx_frac
             # Expand the win_length parameter to match the shape of the base array
             # if self.actual_win_length.dim() == 3:
@@ -299,20 +297,18 @@ class DSTFT(nn.Module):
                 # mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2))
                 self.tap_win[mask1] = 0
                 self.tap_win[mask2] = 0
-                #self.tap_win = self.tap_win.pow(self.actual_pow)
-                self.tap_win = self.tap_win / self.N * 2
-                return self.tap_win
+                # self.tap_win =self.tap_win.pow(self.actual_pow)
+                self.tap_win = self.tap_win / \
+                    self.tap_win.sum(dim=0, keepdim=True)
+                return self.tap_win.pow(self.win_pow)
 
             elif direction == 'backward':
-                #f = torch.sin(2 * pi * (base - (self.N-1)/2) /
-                #             self.actual_win_length)
-                f = torch.sin(
-                        2 * pi * (base + (self.actual_win_length-self.N+1)/2) / self.actual_win_length)
-                d_tap_win = - pi / self.actual_win_length.pow(2) * \
+                f = torch.sin(2 * pi * (base - (self.N-1)/2) /
+                              self.actual_win_length)
+                d_tap_win = - pi / self.actual_win_length * \
                     ((self.N-1)/2 - base) * f
                 d_tap_win[mask1] = 0
                 d_tap_win[mask2] = 0
-                d_tap_win = d_tap_win / self.N * 2
                 return d_tap_win
 
     def coverage(self):  # in [0, 1]
@@ -541,18 +537,19 @@ class FDSTFT(nn.Module):
     def forward(self, x):
         # Perform the forward STFT and extract the magnitude, phase, real, and imaginary parts
         stft = self.stft(x, 'forward')
-        real, imag, spec, phase = stft.real, stft.imag, (stft + torch.finfo(
-            x.dtype).eps).abs().pow(self.pow)[:, :self.F], stft.angle()[:, :self.F]
-        return spec, stft, real, imag, phase
+        #real, imag, spec, phase = stft.real, stft.imag, (stft + torch.finfo(
+        #    x.dtype).eps).abs().pow(self.pow)[:, :self.F], stft.angle()[:, :self.F]
+        spec = (stft + torch.finfo(x.dtype).eps).abs().pow(self.pow)#[:, :self.F]
+        return spec, stft  # , real, imag, phase
 
     def backward(self, x, dl_ds):
         # Compute the gradient of the loss w.r.t. window length parameter with the chain rule
         dstft_dp = self.stft(x, 'backward')
         # dl_dp = (dl_ds.real * dstft_dp.real + dl_ds.imag * dstft_dp.imag).sum()
         dl_dp = (torch.conj(dl_ds) * dstft_dp)
-        #print('dl_dp', dl_dp.shape, self.win_length.shape)
+        # print('dl_dp', dl_dp.shape, self.win_length.shape)
         dl_dp = dl_dp.sum().real.expand(self.win_length.shape)
-        #print('dl_dp', dl_dp.shape, self.win_length.shape)
+        # print('dl_dp', dl_dp.shape, self.win_length.shape)
         return dl_dp
 
     def stft(self, x: torch.tensor, direction: str):
@@ -575,18 +572,19 @@ class FDSTFT(nn.Module):
         # print("tapered_x", tapered_x.shape)
 
         # print(tapered_x.shape)
-        spectr = torch.fft.fft(self.tapered_x)  # B, T, N
+        #spectr = torch.fft.fft(self.tapered_x)  # B, T, N
+        spectr = torch.fft.rfft(self.tapered_x)  # B, T, F
         # print("spectrum", spectr.shape)
 
         # print(spectr.shape)
-        shift = torch.arange(end=self.N, device=self.device,
+        shift = torch.arange(end=self.F, device=self.device,
                              dtype=self.dtype, requires_grad=False)
         shift = (idx_frac[:, None] * shift[None, :])  # T, N
         shift = torch.exp(2j * pi * shift / self.N)[None, ...]  # 1, T, N
         # print("shift", shift.shape)
 
         stft = spectr * shift
-        # print("stft", stft.shape)
+        #print("stft", stft.shape)
 
         # B, N, T           #stft = stft.transpose(-1, -2)
         stft = stft.permute(0, 2, 1)
@@ -639,10 +637,10 @@ class FDSTFT(nn.Module):
                 return self.tap_win.pow(self.win_pow)
 
             elif direction == 'backward':
-                #f = torch.sin(2 * pi * (base - (self.N-1)/2) /
+                # f = torch.sin(2 * pi * (base - (self.N-1)/2) /
                 #             self.actual_win_length)
                 f = torch.sin(
-                        2 * pi * (base + (self.actual_win_length-self.N+1)/2) / self.actual_win_length)
+                    2 * pi * (base + (self.actual_win_length-self.N+1)/2) / self.actual_win_length)
                 d_tap_win = - pi / self.actual_win_length.pow(2) * \
                     ((self.N-1)/2 - base) * f
                 d_tap_win[mask1] = 0
