@@ -197,10 +197,11 @@ class DSTFT(nn.Module):
     def forward(self, x):
         # Perform the forward STFT and extract the magnitude, phase, real, and imaginary parts
         stft = self.stft(x, 'forward')
-        #real, imag, spec, phase = stft.real, stft.imag, stft.abs().pow(
+        # real, imag, spec, phase = stft.real, stft.imag, stft.abs().pow(
         #    self.pow)[:, :self.F], stft.angle()[:, :self.F]
-        spec = (stft + torch.finfo(x.dtype).eps).abs().pow(self.pow)[:, :self.F]
-        return spec, stft#, real, imag, phase
+        # [:, :self.F]
+        spec = (stft + torch.finfo(x.dtype).eps).abs().pow(self.pow)
+        return spec, stft  # , real, imag, phase
 
     def backward(self, x, dl_ds):
         # Compute the gradient of the loss w.r.t. window length parameter with the chain rule
@@ -214,18 +215,18 @@ class DSTFT(nn.Module):
 
         # Generate strided signal and shift idx_frac
         strided_x, idx_frac = self.stride(x)  # B, T, N; T
-        #print("strided_x", strided_x.shape)
+        # print("strided_x", strided_x.shape)
 
         # Generate the tapering window function for the STFT
         self.tap_win = self.window_function(
             direction=direction, idx_frac=idx_frac).permute(2, 1, 0)  # T, N, N
-        #print("tap_win", self.tap_win.shape)
+        # print("tap_win", self.tap_win.shape)
 
         # Generate tapering function shift
         shift = torch.arange(end=self.F, device=self.device,
                              dtype=self.dtype, requires_grad=False)
         shift = idx_frac[:, None] * shift[None, :]  # T, N
-        #print("shift", shift.shape)
+        # print("shift", shift.shape)
 
         # Compute tapered x
         self.strided_x = strided_x[:, :, None, :]  # B, T, 1, N
@@ -233,20 +234,20 @@ class DSTFT(nn.Module):
         shift = torch.exp(2j * pi * shift /
                           self.N)[None, :, :, None]  # 1, T, N, 1
         self.tapered_x = self.strided_x * self.tap_win * shift  # B, T, F, N
-        #print("tapered_x", self.tapered_x.shape)
+        # print("tapered_x", self.tapered_x.shape)
 
         # Generate Fourier coefficients
         coeff = torch.arange(end=self.N, device=self.device,
                              dtype=self.dtype, requires_grad=False)
         coeff = coeff[:self.F, None] @ coeff[None, :]
         coeff = torch.exp(- 2j * pi * coeff / self.N)  # F, N
-        #print("coeff", coeff.shape)
+        # print("coeff", coeff.shape)
 
         # Perform the STFT
         coeff = coeff[None, None, :, :]  # 1, 1, N, N
         # B, T, N        #stft = torch.einsum('...ij,...jk->...ik', tapered_x, coeff)
         stft = (self.tapered_x * coeff).sum(dim=-1)
-        #print("stft", stft.shape)
+        # print("stft", stft.shape)
         # B, N, T           #stft = stft.transpose(-1, -2)
         stft = stft.permute(0, 2, 1)
 
@@ -254,12 +255,12 @@ class DSTFT(nn.Module):
 
     def stride(self, x) -> torch.tensor:
         # frames index and strided x
-        #print('frames', self.frames.shape)
+        # print('frames', self.frames.shape)
         idx_floor = self.frames.floor()
         idx_frac = self.frames - idx_floor
         idx_floor = idx_floor.long()[:, None].expand(
             (self.T, self.N)) + torch.arange(0, self.N, device=self.device)
-        #print('idx', idx_floor.shape)
+        # print('idx', idx_floor.shape)
         idx_floor[idx_floor >= self.L] = -1
         strided_x = x[:, idx_floor]
         strided_x[:, idx_floor < 0] = 0
@@ -328,13 +329,13 @@ class DSTFT(nn.Module):
         cov /= self.L
         return cov
 
-    def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False, figsize=(6.4, 4.8)):
+    def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False, figsize=(6.4, 4.8), vmin=None, vmax=None):
         plt.figure(figsize=figsize)
-        plt.title('Spectrogram')
+        #plt.title('Spectrogram')
         ax = plt.subplot()
-        im = ax.imshow(spec[0].detach().cpu().log(), aspect='auto', origin='lower',
+        im = ax.imshow(spec[0].detach().cpu().log(), vmin=vmin, vmax=vmax, aspect='auto', origin='lower',
                        cmap='jet', extent=[0, spec.shape[-1], 0, spec.shape[-2]])
-        plt.ylabel('frequencies')
+        plt.ylabel('frequency bins')
         plt.xlabel('frames')
         if bar == True:
             plt.colorbar(im, ax=ax)
@@ -342,11 +343,11 @@ class DSTFT(nn.Module):
 
         if weights == True:
             plt.figure(figsize=figsize)
-            plt.title('Distribution of window lengths')
+            #plt.title('Distribution of window lengths')
             ax = plt.subplot()
             im = ax.imshow(self.actual_win_length[:self.F].detach(
             ).cpu(), aspect='auto', origin='lower', cmap='jet')
-            ax.set_ylabel('frequencies')
+            ax.set_ylabel('frequency bins')
             ax.set_xlabel('frames')
             if bar == True:
                 plt.colorbar(im, ax=ax)
@@ -537,9 +538,10 @@ class FDSTFT(nn.Module):
     def forward(self, x):
         # Perform the forward STFT and extract the magnitude, phase, real, and imaginary parts
         stft = self.stft(x, 'forward')
-        #real, imag, spec, phase = stft.real, stft.imag, (stft + torch.finfo(
+        # real, imag, spec, phase = stft.real, stft.imag, (stft + torch.finfo(
         #    x.dtype).eps).abs().pow(self.pow)[:, :self.F], stft.angle()[:, :self.F]
-        spec = (stft + torch.finfo(x.dtype).eps).abs().pow(self.pow)#[:, :self.F]
+        # [:, :self.F]
+        spec = (stft + torch.finfo(x.dtype).eps).abs().pow(self.pow)
         return spec, stft  # , real, imag, phase
 
     def backward(self, x, dl_ds):
@@ -572,7 +574,7 @@ class FDSTFT(nn.Module):
         # print("tapered_x", tapered_x.shape)
 
         # print(tapered_x.shape)
-        #spectr = torch.fft.fft(self.tapered_x)  # B, T, N
+        # spectr = torch.fft.fft(self.tapered_x)  # B, T, N
         spectr = torch.fft.rfft(self.tapered_x)  # B, T, F
         # print("spectrum", spectr.shape)
 
@@ -584,7 +586,7 @@ class FDSTFT(nn.Module):
         # print("shift", shift.shape)
 
         stft = spectr * shift
-        #print("stft", stft.shape)
+        # print("stft", stft.shape)
 
         # B, N, T           #stft = stft.transpose(-1, -2)
         stft = stft.permute(0, 2, 1)
@@ -665,17 +667,17 @@ class FDSTFT(nn.Module):
         cov /= self.L
         return cov
 
-    def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False, figsize=(6.4, 4.8), f_hat=None, fs=None):
+    def print(self, spec, x=None, marklist=None, weights=True, wins=True, bar=False, figsize=(6.4, 4.8), f_hat=None, fs=None, vmin=None, vmax=None):
         plt.figure(figsize=figsize)
-        plt.title('Spectrogram')
+        #plt.title('Spectrogram')
         ax = plt.subplot()
         if fs is None:
             f_max = spec.shape[-2]
         else:
             f_max = fs / 2
         im = ax.imshow(spec[0].detach().cpu().log(
-        ), aspect='auto', origin='lower', cmap='jet', extent=[0, spec.shape[-1], 0, f_max])
-        plt.ylabel('frequencies')
+        ), vmin=vmin, vmax=vmax, aspect='auto', origin='lower', cmap='jet', extent=[0, spec.shape[-1], 0, f_max])
+        plt.ylabel('frequency bins')
         plt.xlabel('frames')
         if bar == True:
             plt.colorbar(im, ax=ax)
@@ -686,11 +688,11 @@ class FDSTFT(nn.Module):
 
         if weights == True:
             plt.figure(figsize=figsize)
-            plt.title('Distribution of window lengths')
+            #plt.title('Distribution of window lengths')
             ax = plt.subplot()
             im = ax.imshow(self.actual_win_length[:self.F].detach(
             ).cpu(), aspect='auto', origin='lower', cmap='jet')
-            ax.set_ylabel('frequencies')
+            ax.set_ylabel('frequency bins')
             ax.set_xlabel('frames')
             if bar == True:
                 plt.colorbar(im, ax=ax)

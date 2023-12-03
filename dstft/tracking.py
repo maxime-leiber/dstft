@@ -70,15 +70,6 @@ def frequency_tracking(y, fs, spec, fmin, fmax, alpha, orders=[]):
     Prob = torch.zeros_like(spec_db)
     Prob[(freqs >= fmin) & (freqs <= fmax)] = spec_db[(freqs >= fmin) & (freqs <= fmax)]
     
-    # plt.figure()
-    # plt.title('Prob')
-    # ax = plt.subplot()
-    # im = ax.imshow(Prob.detach().cpu().log(), aspect='auto', origin='lower', cmap='viridis', extent=[0, spec.shape[-1], 0, spec.shape[-2]])
-    # plt.ylabel('frequencies')
-    # plt.xlabel('frames')
-    # plt.colorbar(im, ax=ax)
-    # plt.show()
-    
     # Take account of harmonics 
     for o in orders:
         Po = torch.ones_like(Prob)
@@ -87,43 +78,16 @@ def frequency_tracking(y, fs, spec, fmin, fmax, alpha, orders=[]):
         Po[idx[order_idx < L]] = spec_db[order_idx[order_idx < L]]
         Prob = Prob*Po
         
-    # plt.figure()
-    # plt.title('Prob')
-    # ax = plt.subplot()
-    # im = ax.imshow(Prob.detach().cpu().log(), aspect='auto', origin='lower', cmap='viridis', extent=[0, spec.shape[-1], 0, spec.shape[-2]])
-    # plt.ylabel('frequencies')
-    # plt.xlabel('frames')
-    # plt.colorbar(im, ax=ax)
-    # plt.show()
-        
     # Normalize probability
     epsilon = Prob.sum(dim=0, keepdim=True)
     epsilon[epsilon == 0] = 1
     Prob = Prob / epsilon
-    
-    # plt.figure()
-    # plt.title('Prob')
-    # ax = plt.subplot()
-    # im = ax.imshow(Prob.detach().cpu().log(), aspect='auto', origin='lower', cmap='viridis', extent=[0, spec.shape[-1], 0, spec.shape[-2]])
-    # plt.ylabel('frequencies')
-    # plt.xlabel('frames')
-    # plt.colorbar(im, ax=ax)
-    # plt.show()
     
     # Add priors for smoothness
     sigma = alpha*torch.ones(Prob.shape[1], device=y.device)*dt
     freqs_centred = torch.arange(-L/2, L/2, device=y.device)*df
     
     Prior = 0.5*(freqs_centred.repeat(T, 1).T/sigma.repeat(L, 1))**2 - torch.log(np.sqrt(2 * math.pi) * sigma.repeat(L, 1))
-    
-    # plt.figure()
-    # plt.title('Prior')
-    # ax = plt.subplot()
-    # im = ax.imshow(Prob.detach().cpu().log(), aspect='auto', origin='lower', cmap='viridis', extent=[0, spec.shape[-1], 0, spec.shape[-2]])
-    # plt.ylabel('frequencies')
-    # plt.xlabel('frames')
-    # plt.colorbar(im, ax=ax)
-    # plt.show()
     
     out = dynamic_programming(Prob.squeeze(), Prior)
     #print((out[None, None, ...]*df).shape)
