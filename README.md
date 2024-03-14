@@ -1,6 +1,42 @@
 # DSTFT, a learnable time-frequency layer
+
+This repository contains ...
+
 Differentiable short-time Fourier transform (DSTFT): Gradient-based parameters tuning for adaptive time-frequency representation.
 DSTFT is a neural network layer whose weights are its parameters (i.e. window and hop lengths).
+
+
+
+## Installation
+
+### Clone sphm Package
+
+```bash
+git clone https://github.com/maxime-leiber/dstft
+cd dstft
+```
+
+### Install dstft Package
+
+#### create new conda env
+
+```bash
+conda env create -f environment.yml
+```
+
+#### or update existing conda env
+
+```bash
+conda env update -f environment.yml
+```
+
+#### or use pip
+
+```bash
+pip install -e .
+```
+
+
 
 
 <p float="middle">

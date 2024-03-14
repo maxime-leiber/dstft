@@ -162,3 +162,8 @@ cython_debug/
 tmp/
 tmp/*
 notebooks/0_.ipynb
+notebooks/isma.ipynb
+notebooks/runtime.ipynb
+notebooks/sst.ipynb
+notebooks/test.ipynb
+
