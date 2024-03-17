@@ -1,0 +1,41 @@
+[tool.ruff]
+line-length = 79  # Set the maximum line length to 79.
+fix = true  # Enable fix behavior by-default when running ruff
+
+
+select = [
+    #"A",  # prevent using keywords that clobber python builtins
+    "B",  # bugbear: security warnings
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "ISC",  # implicit string concatenation
+    "UP",  # alert you when better syntax is available in your python version
+    "RUF",  # the ruff developer's own rules
+    
+]
+
+
+ignore = [
+    "E712",  # Allow using if x == False, as it's not always equivalent to if x.
+    "E501",  # Supress line-too-long warnings: trust black's judgement on this one.
+]
+
+
+fixable = [
+    "F401",  # Remove unused imports.
+    "NPY001",  # Fix numpy types, which are removed in 1.24.
+#    "RUF100",  # Remove unused noqa comments.
+#    "ALL",
+]
+
+
+[tool.ruff.format]
+preview = true
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+line-ending = "auto" # automatically detect the appropriate line ending.
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+select = ["ALL"]
