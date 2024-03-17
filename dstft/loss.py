@@ -4,8 +4,9 @@ import torch
 def entropy_loss(x):
     x1 = torch.reshape(x, (x.shape[0], -1))  # B, N
     probs = torch.div(x1.T, x1.sum(dim=-1)).T  # B, N
-    entropy = -(probs * torch.clamp(torch.log(probs),
-                min=torch.finfo(x.dtype).min)).sum(dim=-1)  # B
+    entropy = -(
+        probs * torch.clamp(torch.log(probs), min=torch.finfo(x.dtype).min)
+    ).sum(dim=-1)  # B
     return entropy.mean()
 
 

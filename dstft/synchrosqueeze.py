@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from math import pi
 
+
 def fast_sst(X, dT, Nv, Nt, gamma, device):
     X[torch.isnan(X)] = 0
     Z_Ts = torch.zeros(Nv, Nt)
@@ -21,11 +22,10 @@ def fast_sst(X, dT, Nv, Nt, gamma, device):
                 k = torch.argmin(torch.abs(F - omega[eta, b]))
                 Z_Ts[eta, b] = Z_Ts[eta, b] + torch.mean(X[k, b])
 
-    Z_Ts = 10*Z_Ts.abs()#[:len(Z_Ts)//2+1]
-    Z_Ts[Z_Ts == 0] = Z_Ts[Z_Ts > 0].min()/2
+    Z_Ts = 10 * Z_Ts.abs()  # [:len(Z_Ts)//2+1]
+    Z_Ts[Z_Ts == 0] = Z_Ts[Z_Ts > 0].min() / 2
 
     return Z_Ts
-
 
 
 def amgauss(N, t0, T, device):
@@ -53,14 +53,9 @@ def amgauss(N, t0, T, device):
         raise ValueError('N must be greater or equal to 1.')
     else:
         tmt0 = torch.arange(1, N + 1, device=device) - t0
-        y = torch.exp(-(tmt0 / T)**2 * pi)
+        y = torch.exp(-((tmt0 / T) ** 2) * pi)
 
     return y
-
-
-
-
-
 
 
 def sst2(s, sigma, Nfft, gamma):
@@ -82,18 +77,18 @@ def sst2(s, sigma, Nfft, gamma):
 
     prec = 1e-3
     L = sigma * N
-    l = int(np.floor(L * np.sqrt(-np.log(prec)/np.pi)) + 1)
-    g = amgauss(2*l+1, l+1, L, s.device)
-    #g = torch.from_numpy(g).to(s.device)
+    l = int(np.floor(L * np.sqrt(-np.log(prec) / np.pi)) + 1)
+    g = amgauss(2 * l + 1, l + 1, L, s.device)
+    # g = torch.from_numpy(g).to(s.device)
 
     # Window definition
 
     n = torch.arange(-l, l + 1, device=s.device)
-    t0 = n/N
+    t0 = n / N
     t0 = t0.reshape((-1,))
     a = np.pi / sigma**2
-    gp = -2*a*t0*g
-    gpp = (-2*a+4*a**2*t0**2)*g
+    gp = -2 * a * t0 * g
+    gpp = (-2 * a + 4 * a**2 * t0**2) * g
 
     # Initialization
 
@@ -108,12 +103,16 @@ def sst2(s, sigma, Nfft, gamma):
 
     for b in range(N):
         # STFT, window g
-        time_inst = torch.arange(-min([l, b - 1]), min([l, N - b]), device=s.device)
-        tmp = torch.fft.fft(s[bt[b]+time_inst] * g[l+time_inst+1], Nfft)
+        time_inst = torch.arange(
+            -min([l, b - 1]), min([l, N - b]), device=s.device
+        )
+        tmp = torch.fft.fft(s[bt[b] + time_inst] * g[l + time_inst + 1], Nfft)
         vg = tmp[ft]
 
         # STFT, window xg
-        tmp = torch.fft.fft(s[bt[b]+time_inst] * (time_inst)/N * g[l+time_inst+1], Nfft)
+        tmp = torch.fft.fft(
+            s[bt[b] + time_inst] * (time_inst) / N * g[l + time_inst + 1], Nfft
+        )
         vxg = tmp[ft]
 
         # operator Lx (dtau)
@@ -121,31 +120,45 @@ def sst2(s, sigma, Nfft, gamma):
         tau[b, :] = vxg / vg
 
         # STFT, window gp
-        tmp = torch.fft.fft(s[bt[b]+time_inst] * gp[l+time_inst+1], Nfft)
+        tmp = torch.fft.fft(s[bt[b] + time_inst] * gp[l + time_inst + 1], Nfft)
         vgp = tmp[ft]
 
         # operator omega
-        omega[b, :] = N / Nfft * (ft - 1) - torch.real(vgp / 2 / 1j / np.pi / vg)
+        omega[b, :] = N / Nfft * (ft - 1) - torch.real(
+            vgp / 2 / 1j / np.pi / vg
+        )
 
         # STFT, window gpp
-        tmp = torch.fft.fft(s[bt[b]+time_inst] * gpp[l+time_inst+1], Nfft)
+        tmp = torch.fft.fft(
+            s[bt[b] + time_inst] * gpp[l + time_inst + 1], Nfft
+        )
         vgpp = tmp[ft]
 
         # STFT, windox xgp
-        tmp = torch.fft.fft(s[bt[b]+time_inst] * (time_inst)/N * gp[l+time_inst+1], Nfft)
+        tmp = torch.fft.fft(
+            s[bt[b] + time_inst] * (time_inst) / N * gp[l + time_inst + 1],
+            Nfft,
+        )
         vxgp = tmp[ft]
 
         # computation of the two different omega
 
-        phipp[b, :] = 1 / 2 / 1j / np.pi * (vgpp * vg - vgp**2) / (vxg * vgp - vxgp * vg)
+        phipp[b, :] = (
+            1 / 2 / 1j / np.pi * (vgpp * vg - vgp**2) / (vxg * vgp - vxgp * vg)
+        )
         print(phipp.dtype)
 
         # new omega2
-        omega2[b, :] = omega[b, :] - torch.real(phipp[b, :]) * torch.real(tau[b, :]) \
-                                  + torch.imag(phipp[b, :]) * torch.imag(tau[b, :])
+        omega2[b, :] = (
+            omega[b, :]
+            - torch.real(phipp[b, :]) * torch.real(tau[b, :])
+            + torch.imag(phipp[b, :]) * torch.imag(tau[b, :])
+        )
 
         # Storing STFT
-        STFT[b, :] = vg * torch.exp(2*1j*np.pi*(ft-1)*min(l,b-1)/Nfft)
+        STFT[b, :] = vg * torch.exp(
+            2 * 1j * np.pi * (ft - 1) * min(l, b - 1) / Nfft
+        )
 
     # reassignment step
     for b in range(N):

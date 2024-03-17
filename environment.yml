@@ -10,6 +10,7 @@ dependencies:
   - ipympl
   - widgetsnbextension
   - ipywidgets
+  - librosa
   - matplotlib
   - numpy
   - scipy
