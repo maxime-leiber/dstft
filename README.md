@@ -1,4 +1,4 @@
-# DSTFT, a learnable time-frequency layer
+# DSTFT for an adaptive and learnable time-frequency representation
 
 This repository contains the code of differentiable short-time Fourier transform (DSTFT). It allows automatic tuning of spectrogram parameters by optimizing them by gradient descent. DSTFT is a time-frequency neural network layer whose weights are its parameters (i.e. window and hop lengths at the moment).
 

@@ -15,6 +15,7 @@ dependencies:
   - scipy
   - pandas
   - torchaudio
+  - seaborn
   - pip
   - pip:
     - -e .
