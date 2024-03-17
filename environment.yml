@@ -16,6 +16,8 @@ dependencies:
   - pandas
   - torchaudio
   - seaborn
+  - streamlit
+  - pytest
   - pip
   - pip:
     - -e .
