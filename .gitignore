@@ -160,6 +160,7 @@ cython_debug/
 #.idea/
 
 TODO.md
+fig/*
 tmp/
 tmp/*
 notebooks/0_.ipynb
