@@ -31,7 +31,7 @@ fixable = [
 
 [tool.ruff.format]
 preview = true
-quote-style = "single"
+quote-style = "double"
 indent-style = "space"
 docstring-code-format = true
 line-ending = "auto" # automatically detect the appropriate line ending.
