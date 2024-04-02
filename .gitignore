@@ -160,6 +160,10 @@ cython_debug/
 #.idea/
 
 TODO.md
+dstft/loss.py
+dstft/optim.py
+dstft/synchrosqueeze.py
+dstft/tracking.py
 tmp/
 tmp/*
 notebooks/0_.ipynb
@@ -168,4 +172,13 @@ notebooks/runtime1.ipynb
 notebooks/sst.ipynb
 notebooks/test.ipynb
 notebooks/illustration.ipynb
-
+notebooks/autre.ipynb
+notebooks/1_tf_varying_window_length.ipynb
+notebooks/2_tf_varying_window_length.ipynb
+notebooks/3_tf_varying_window_length.ipynb
+notebooks/4_tracking_frequency.ipynb
+notebooks/5_tracking_frequency.ipynb
+notebooks/6_time_varying_window_and_hop_length.ipynb
+notebooks/7_time_varying_window_and_hop_length.ipynb
+notebooks/8_tf_speech.ipynb
+notebooks/9_car_kaist.ipynb

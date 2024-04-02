@@ -1,42 +1,53 @@
+#!/usr/bin/env python
+
+"""Module docstring goes here.
+"""
+
 from math import pi
 
 import matplotlib.pyplot as plt
 import torch
-
-import torch.nn as nn
+from torch import nn
 
 
 class DSTFT(nn.Module):
+    """Differentiable short-time Fourier transform (DSTFT) module.
+
+    Args:
+    ----
+        nn (_type_): _description_
+
+    """
+
     def __init__(
-        self,
-        x,
+        self: nn.Module,
+        x: torch.tensor,
         win_length: float,
         support: int,
         stride: int,
         pow: float = 1.0,
         win_pow: float = 1.0,
-        win_p: str = None,
-        stride_p: str = None,
-        pow_p: str = None,
-        win_requires_grad: bool = True,
+        win_p: str | None = None,
+        stride_p: str | None = None,
+        pow_p: str | None = None,
+        win_requires_grad=True,
         stride_requires_grad: bool = True,
         pow_requires_grad: bool = False,
         # params: str = 'p_tf', # p, p_t, p_f, p_tf
-        win_min=None,
-        win_max=None,
-        stride_min=None,
-        stride_max=None,
-        pow_min=None,
-        
-        pow_max=None,
-        tapering_function: str = 'hann',
+        win_min: float | None = None,
+        win_max: float | None = None,
+        stride_min: float | None = None,
+        stride_max: float | None = None,
+        pow_min: float | None = None,
+        pow_max: float | None = None,
+        tapering_function: str = "hann",
         sr: int = 16_000,
         window_transform=None,
         stride_transform=None,
         dynamic_parameter: bool = False,
         first_frame: bool = False,
     ):
-        super(DSTFT, self).__init__()
+        super().__init__()
 
         # Constants and hyperparameters
         self.N = support  # support size
@@ -58,7 +69,7 @@ class DSTFT(nn.Module):
 
         # Register eps and min as a buffer tensor
         self.register_buffer(
-            'eps',
+            "eps",
             torch.tensor(
                 torch.finfo(torch.float).eps,
                 dtype=self.dtype,
@@ -66,7 +77,7 @@ class DSTFT(nn.Module):
             ),
         )
         self.register_buffer(
-            'min',
+            "min",
             torch.tensor(
                 torch.finfo(torch.float).min,
                 dtype=self.dtype,
@@ -78,10 +89,9 @@ class DSTFT(nn.Module):
         self.T = int(
             1
             + torch.div(
-                x.shape[-1] - (self.N - 1) - 1, stride, rounding_mode='floor'
-            )
+                x.shape[-1] - (self.N - 1) - 1, stride, rounding_mode="floor",
+            ),
         )
-        # self.T = int(1 + torch.div(self.L - self.N/2 , stride, rounding_mode='floor'))
 
         if win_min is None:
             self.win_min = self.N / 20
@@ -116,19 +126,17 @@ class DSTFT(nn.Module):
         # Determine the shape of the stride/hop-length/ frame index parameters
         if stride_p is None:
             stride_size = (1,)
-        elif stride_p == 't':
+        elif stride_p == "t":
             stride_size = (self.T,)
         else:
-            raise ValueError(f'stride_p error {stride_p}')
+            raise ValueError(f"stride_p error {stride_p}")
         # Create the window length parameter and assign it the appropriate shape
         self.strides = nn.Parameter(
             torch.full(
-                stride_size, abs(stride), dtype=self.dtype, device=self.device
+                stride_size, abs(stride), dtype=self.dtype, device=self.device,
             ),
             requires_grad=self.stride_requires_grad,
         )
-        # print(self.strides)
-        # self.stride = stride
 
         # WIN LENGTH
         # win length constraints
@@ -139,14 +147,14 @@ class DSTFT(nn.Module):
         # Determine the shape of the window length parameters
         if win_p is None:
             win_length_size = (1, 1)
-        elif win_p == 't':
+        elif win_p == "t":
             win_length_size = (1, self.T)
-        elif win_p == 'f':
+        elif win_p == "f":
             win_length_size = (self.N, 1)
-        elif win_p == 'tf':
+        elif win_p == "tf":
             win_length_size = (self.N, self.T)
         else:
-            raise ValueError(f'win_p error {win_p}')
+            raise ValueError(f"win_p error {win_p}")
         # Create the window length parameter and assign it the appropriate shape
         self.win_length = nn.Parameter(
             torch.full(
@@ -161,14 +169,14 @@ class DSTFT(nn.Module):
         # WIN POW
         if pow_p is None:
             win_pow_size = (1, 1)
-        elif pow_p == 't':
+        elif pow_p == "t":
             win_pow_size = (1, self.T)
-        elif pow_p == 'f':
+        elif pow_p == "f":
             win_pow_size = (self.N, 1)
-        elif pow_p == 'tf':
+        elif pow_p == "tf":
             win_pow_size = (self.N, self.T)
         else:
-            print('pow_p error', pow_p)
+            print("pow_p error", pow_p)
         self.win_pow = nn.Parameter(
             torch.full(
                 win_pow_size,
@@ -179,44 +187,55 @@ class DSTFT(nn.Module):
             requires_grad=self.pow_requires_grad,
         )
 
-    def __window_transform(self, w_in):
+    def __window_transform(self : nn.Module, w_in):
+        """_summary_
+
+        Args:
+        ----
+            w_in (_type_): _description_
+
+        Returns:
+        -------
+            _type_: _description_
+
+        """
         w_out = torch.minimum(
             torch.maximum(
                 w_in,
                 torch.full_like(
-                    w_in, self.win_min, dtype=self.dtype, device=self.device
+                    w_in, self.win_min, dtype=self.dtype, device=self.device,
                 ),
             ),
             torch.full_like(
-                w_in, self.win_max, dtype=self.dtype, device=self.device
+                w_in, self.win_max, dtype=self.dtype, device=self.device,
             ),
         )
         return w_out
 
-    def __stride_transform(self, s_in):  # born stride entre 0 et 2N
+    def __stride_transform(self : nn.Module, s_in):  # born stride entre 0 et 2N
         s_out = torch.minimum(
             torch.maximum(
                 s_in,
                 torch.full_like(
-                    s_in, self.stride_min, dtype=self.dtype, device=self.device
+                    s_in, self.stride_min, dtype=self.dtype, device=self.device,
                 ),
             ),
             torch.full_like(
-                s_in, self.stride_max, dtype=self.dtype, device=self.device
+                s_in, self.stride_max, dtype=self.dtype, device=self.device,
             ),
         )
         return s_out
 
-    def __pow_transform(self, p_in):  # born stride entre 0 et 2N
+    def __pow_transform(self : nn.Module, p_in):  # born stride entre 0 et 2N
         p_out = torch.minimum(
             torch.maximum(
                 p_in,
                 torch.full_like(
-                    p_in, self.pow_min, dtype=self.dtype, device=self.device
+                    p_in, self.pow_min, dtype=self.dtype, device=self.device,
                 ),
             ),
             torch.full_like(
-                p_in, self.pow_max, dtype=self.dtype, device=self.device
+                p_in, self.pow_max, dtype=self.dtype, device=self.device,
             ),
         )
         return p_out
@@ -243,14 +262,11 @@ class DSTFT(nn.Module):
         if self.first_frame:
             frames[0] = (
                 self.actual_win_length.expand((self.N, self.T))[:, 0].max(
-                    dim=0, keepdim=False
+                    dim=0, keepdim=False,
                 )[0]
                 - self.N
             ) / 2
         frames[1:] = frames[0] + expanded_stride[1:].cumsum(dim=0)
-
-        # frames = torch.cumsum(self.actual_strides, dim=0)
-        # print(frames)
         return frames
 
     @property
@@ -263,10 +279,10 @@ class DSTFT(nn.Module):
             torch.cat(
                 (
                     torch.tensor(
-                        [self.N], dtype=self.dtype, device=self.device
+                        [self.N], dtype=self.dtype, device=self.device,
                     ),
                     self.actual_win_length.expand((self.N, self.T)).max(
-                        dim=0, keepdim=False
+                        dim=0, keepdim=False,
                     )[0],
                 ),
                 dim=0,
@@ -276,40 +292,29 @@ class DSTFT(nn.Module):
         effective_strides = effective_strides - cat
         return effective_strides
 
-    def forward(self, x):
+    def forward(self: nn.Module, x: torch.tensor) -> tuple:
         # Perform the forward STFT and extract the magnitude, phase, real, and imaginary parts
-        stft = self.stft(x, 'forward')
-        real, imag, spec, phase = (
-            stft.real,
-            stft.imag,
-            stft.abs().pow(self.pow)[:, : self.F],
-            stft.angle()[:, : self.F],
-        )
-        spec = spec + torch.finfo(x.dtype).eps
-        return spec, stft, real, imag, phase
+        stft = self.stft(x, "forward")
+        spec = stft.abs().pow(self.pow)[:, : self.F] + torch.finfo(x.dtype).eps
+        return spec, stft
 
-    def backward(self, x, dl_ds):
+    def backward(self: nn.Module, x: torch.tensor, dl_ds: torch.tensor) -> torch.tensor:
         # Compute the gradient of the loss w.r.t. window length parameter with the chain rule
-        dstft_dp = self.stft(x, 'backward')
-        # dl_dp = (dl_ds.real * dstft_dp.real + dl_ds.imag * dstft_dp.imag).sum()
+        dstft_dp = self.stft(x, "backward")
         dl_dp = torch.conj(dl_ds) * dstft_dp
-        # print('dl_dp', dl_dp.shape, self.win_length.shape)
         dl_dp = dl_dp.sum().real.expand(self.win_length.shape)
-        # print('dl_dp', dl_dp.shape, self.win_length.shape)
         return dl_dp
 
-    def stft(self, x: torch.tensor, direction: str):
+    def stft(self: nn.Module, x: torch.tensor, direction: str):
         # batch_size, length, device, dtype = x.shape[0], x.shape[-1], x.device, x.dtype
 
         # Generate strided signal and shift idx_frac
         strided_x, idx_frac = self.stride(x)  # B, T, N; T
-        # print("strided_x", strided_x.shape)
 
         # Generate the tapering window function for the STFT
         self.tap_win = self.window_function(
-            direction=direction, idx_frac=idx_frac
+            direction=direction, idx_frac=idx_frac,
         ).permute(2, 1, 0)  # T, N, N
-        # print("tap_win", self.tap_win.shape)
 
         # Generate tapering function shift
         shift = torch.arange(
@@ -319,16 +324,12 @@ class DSTFT(nn.Module):
             requires_grad=False,
         )
         shift = idx_frac[:, None] * shift[None, :]  # T, N
-        # print("shift", shift.shape)
 
         # Compute tapered x
         self.strided_x = strided_x[:, :, None, :]  # B, T, 1, N
         self.tap_win = self.tap_win[None, :, :, :]  # 1, T, N, 1
-        shift = torch.exp(2j * pi * shift / self.N)[
-            None, :, :, None
-        ]  # 1, T, N, 1
+        shift = torch.exp(2j * pi * shift / self.N)[None, :, :, None]  # 1, T, N, 1
         self.tapered_x = self.strided_x * self.tap_win * shift  # B, T, N, N
-        # print("tapered_x", tapered_x.shape)
 
         # Generate Fourier coefficients
         coeff = torch.arange(
@@ -339,19 +340,13 @@ class DSTFT(nn.Module):
         )
         coeff = coeff[:, None] @ coeff[None, :]
         coeff = torch.exp(-2j * pi * coeff / self.N)  # N, N
-        # print("coeff", coeff.shape)
 
         # Perform the STFT
         coeff = coeff[None, None, :, :]  # 1, 1, N, N
-        # B, T, N        #stft = torch.einsum('...ij,...jk->...ik', tapered_x, coeff)
         stft = (self.tapered_x * coeff).sum(dim=-1)
-        # print("stft", stft.shape)
-        # B, N, T           #stft = stft.transpose(-1, -2)
-        stft = stft.permute(0, 2, 1)
+        return stft.permute(0, 2, 1)
 
-        return stft
-
-    def stride(self, x) -> torch.tensor:
+    def stride(self: nn.Module, x) -> torch.tensor:
         # frames index and strided x
         idx_floor = self.frames.floor()
         idx_frac = self.frames - idx_floor
@@ -364,15 +359,15 @@ class DSTFT(nn.Module):
         strided_x[:, idx_floor < 0] = 0
         return strided_x, idx_frac
 
-    def window_function(self, direction: str, idx_frac) -> torch.tensor:
-        if self.tapering_function not in {'hann', 'hanning'}:
+    def window_function(self: nn.Module, direction: str, idx_frac) -> torch.tensor:
+        if self.tapering_function not in {"hann", "hanning"}:
             raise ValueError(
-                f"tapering_function must be one of '{('hann', 'hanning')}', but got padding_mode='{self.tapering_function}'"
+                f"tapering_function must be one of '{('hann', 'hanning')}', but got padding_mode='{self.tapering_function}'",
             )
         else:
             # Create an array of indices to use as the base for the window function
             base = torch.arange(
-                0, self.N, 1, dtype=self.dtype, device=self.device
+                0, self.N, 1, dtype=self.dtype, device=self.device,
             )[:, None, None].expand([-1, self.N, self.T])
             base = base - idx_frac
             # Expand the win_length parameter to match the shape of the base array
@@ -390,15 +385,15 @@ class DSTFT(nn.Module):
 
         # calculate the tapering function and its derivate w.r.t. window length
         if (
-            self.tapering_function == 'hann'
-            or self.tapering_function == 'hanning'
+            self.tapering_function == "hann"
+            or self.tapering_function == "hanning"
         ):
-            if direction == 'forward':
+            if direction == "forward":
                 self.tap_win = 0.5 - 0.5 * torch.cos(
                     2
                     * pi
                     * (base + (self.actual_win_length - self.N + 1) / 2)
-                    / self.actual_win_length
+                    / self.actual_win_length,
                 )
                 # mask1 = base.ge(torch.ceil( (self.N-1+self.actual_win_length)/2))
                 # mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2))
@@ -408,14 +403,14 @@ class DSTFT(nn.Module):
                 self.tap_win = self.tap_win / self.N * 2
                 return self.tap_win
 
-            elif direction == 'backward':
+            elif direction == "backward":
                 # f = torch.sin(2 * pi * (base - (self.N-1)/2) /
                 #             self.actual_win_length)
                 f = torch.sin(
                     2
                     * pi
                     * (base + (self.actual_win_length - self.N + 1) / 2)
-                    / self.actual_win_length
+                    / self.actual_win_length,
                 )
                 d_tap_win = (
                     -pi
@@ -428,10 +423,10 @@ class DSTFT(nn.Module):
                 d_tap_win = d_tap_win / self.N * 2
                 return d_tap_win
 
-    def coverage(self):  # in [0, 1]
+    def coverage(self: nn.Module):  # in [0, 1]
         # compute coverage
         expanded_win, _ = self.actual_win_length.expand((self.N, self.T)).min(
-            dim=0, keepdim=False
+            dim=0, keepdim=False,
         )
         cov = expanded_win[0]
         maxi = self.frames[0] + self.N / 2 + expanded_win[0] / 2
@@ -457,8 +452,8 @@ class DSTFT(nn.Module):
         return cov
 
     def print(
-        self,
-        spec,
+        self: nn.Module,
+        spec: torch.tensor,
         x=None,
         marklist=None,
         weights=True,
@@ -467,33 +462,33 @@ class DSTFT(nn.Module):
         figsize=(6.4, 4.8),
     ):
         plt.figure(figsize=figsize)
-        plt.title('Spectrogram')
+        plt.title("Spectrogram")
         ax = plt.subplot()
         im = ax.imshow(
             spec[0].detach().cpu().log(),
-            aspect='auto',
-            origin='lower',
-            cmap='jet',
+            aspect="auto",
+            origin="lower",
+            cmap="jet",
             extent=[0, spec.shape[-1], 0, spec.shape[-2]],
         )
-        plt.ylabel('frequencies')
-        plt.xlabel('frames')
+        plt.ylabel("frequencies")
+        plt.xlabel("frames")
         if bar is True:
             plt.colorbar(im, ax=ax)
         plt.show()
 
         if weights is True:
             plt.figure(figsize=figsize)
-            plt.title('Distribution of window lengths')
+            plt.title("Distribution of window lengths")
             ax = plt.subplot()
             im = ax.imshow(
                 self.actual_win_length[: self.F].detach().cpu(),
-                aspect='auto',
-                origin='lower',
-                cmap='jet',
+                aspect="auto",
+                origin="lower",
+                cmap="jet",
             )
-            ax.set_ylabel('frequencies')
-            ax.set_xlabel('frames')
+            ax.set_ylabel("frequencies")
+            ax.set_xlabel("frames")
             if bar is True:
                 plt.colorbar(im, ax=ax)
                 im.set_clim(self.win_min, self.win_max)
@@ -517,22 +512,30 @@ class DSTFT(nn.Module):
                     .squeeze()
                     .detach()
                     .cpu(),
-                    c='#1f77b4',
+                    c="#1f77b4",
                 )
 
             if marklist is not None:
                 for elem in marklist:
-                    plt.axvline(elem, 0, self.T, c='gray')
+                    plt.axvline(elem, 0, self.T, c="gray")
             else:
-                ax.axvline(x=0, ymin=0, ymax=self.T, c='gray')
-                ax.axvline(x=x.shape[-1], ymin=0, ymax=self.T, c='gray')
+                ax.axvline(x=0, ymin=0, ymax=self.T, c="gray")
+                ax.axvline(x=x.shape[-1], ymin=0, ymax=self.T, c="gray")
             plt.show()
 
 
 class FDSTFT(nn.Module):
+    """Fast differentiable short-time Fourier transform (FDSTFT) module.
+
+    Args:
+    ----
+        nn (_type_): _description_
+
+    """
+
     def __init__(
-        self,
-        x,
+        self: nn.Module,
+        x: torch.tensor,
         win_length: float,
         support: int,
         stride: int,
@@ -545,18 +548,20 @@ class FDSTFT(nn.Module):
         stride_requires_grad: bool = True,
         pow_requires_grad: bool = False,
         # params: str = 'p_tf', # p, p_t, p_f, p_tf
-        win_min=None,
-        win_max=None,
-        stride_min=None,
-        stride_max=None,
-        tapering_function: str = 'hann',
+        win_min: float | None = None,
+        win_max: float | None = None,
+        stride_min: float | None = None,
+        stride_max: float | None = None,
+        pow_min: float | None = None,
+        pow_max: float | None = None,
+        tapering_function: str = "hann",
         sr: int = 16_000,
         window_transform=None,
         stride_transform=None,
         dynamic_parameter: bool = False,
         first_frame: bool = False,
     ):
-        super(FDSTFT, self).__init__()
+        super().__init__()
 
         # Constants and hyperparameters
         self.N = support  # support size
@@ -578,7 +583,7 @@ class FDSTFT(nn.Module):
 
         # Register eps and min as a buffer tensor
         self.register_buffer(
-            'eps',
+            "eps",
             torch.tensor(
                 torch.finfo(torch.float).eps,
                 dtype=self.dtype,
@@ -586,7 +591,7 @@ class FDSTFT(nn.Module):
             ),
         )
         self.register_buffer(
-            'min',
+            "min",
             torch.tensor(
                 torch.finfo(torch.float).min,
                 dtype=self.dtype,
@@ -598,10 +603,9 @@ class FDSTFT(nn.Module):
         self.T = int(
             1
             + torch.div(
-                x.shape[-1] - (self.N - 1) - 1, stride, rounding_mode='floor'
-            )
+                x.shape[-1] - (self.N - 1) - 1, stride, rounding_mode="floor",
+            ),
         )
-        # self.T = int(1 + torch.div(self.L - self.N/2 , stride, rounding_mode='floor'))
 
         if win_min is None:
             self.win_min = self.N / 20  # 0
@@ -619,6 +623,14 @@ class FDSTFT(nn.Module):
             self.stride_max = max(self.N, abs(stride))
         else:
             self.stride_max = stride_max
+        if pow_min is None:
+            self.pow_min = 0.001
+        else:
+            self.pow_min = pow_min
+        if pow_max is None:
+            self.pow_max = 1000
+        else:
+            self.pow_max = pow_max
 
         # HOP LENGTH / FRAME INDEX
         # hop length constraints
@@ -630,19 +642,17 @@ class FDSTFT(nn.Module):
         # Determine the shape of the stride/hop-length/ frame index parameters
         if stride_p is None:
             stride_size = (1,)
-        elif stride_p == 't':
+        elif stride_p == "t":
             stride_size = (self.T,)
         else:
-            raise ValueError(f'stride_p error {stride_p}')
+            raise ValueError(f"stride_p error {stride_p}")
         # Create the window length parameter and assign it the appropriate shape
         self.strides = nn.Parameter(
             torch.full(
-                stride_size, abs(stride), dtype=self.dtype, device=self.device
+                stride_size, abs(stride), dtype=self.dtype, device=self.device,
             ),
             requires_grad=self.stride_requires_grad,
         )
-        # print(self.strides)
-        # self.stride = stride
 
         # WIN LENGTH
         # win length constraints
@@ -654,10 +664,10 @@ class FDSTFT(nn.Module):
         # Determine the shape of the window length parameters
         if win_p is None:
             win_length_size = (1, 1)
-        elif win_p == 't':
+        elif win_p == "t":
             win_length_size = (1, self.T)
         else:
-            raise ValueError(f'win_p error {win_p}')
+            raise ValueError(f"win_p error {win_p}")
         # Create the window length parameter and assign it the appropriate shape
         self.win_length = nn.Parameter(
             torch.full(
@@ -672,10 +682,10 @@ class FDSTFT(nn.Module):
         # WIN POW
         if pow_p is None:
             win_pow_size = (1, 1)
-        elif pow_p == 't':
+        elif pow_p == "t":
             win_pow_size = (1, self.T)
         else:
-            print('pow_p error', pow_p)
+            print("pow_p error", pow_p)
         self.win_pow = nn.Parameter(
             torch.full(
                 win_pow_size,
@@ -686,33 +696,47 @@ class FDSTFT(nn.Module):
             requires_grad=self.pow_requires_grad,
         )
 
-    def __window_transform(self, w_in):
+    def __window_transform(self: nn.Module, w_in):
         w_out = torch.minimum(
             torch.maximum(
                 w_in,
                 torch.full_like(
-                    w_in, self.win_min, dtype=self.dtype, device=self.device
+                    w_in, self.win_min, dtype=self.dtype, device=self.device,
                 ),
             ),
             torch.full_like(
-                w_in, self.win_max, dtype=self.dtype, device=self.device
+                w_in, self.win_max, dtype=self.dtype, device=self.device,
             ),
         )
         return w_out
 
-    def __stride_transform(self, s_in):  # born stride entre 0 et 2N
+    def __stride_transform(self : nn.Module, s_in):  # born stride entre 0 et 2N
         s_out = torch.minimum(
             torch.maximum(
                 s_in,
                 torch.full_like(
-                    s_in, self.stride_min, dtype=self.dtype, device=self.device
+                    s_in, self.stride_min, dtype=self.dtype, device=self.device,
                 ),
             ),
             torch.full_like(
-                s_in, self.stride_max, dtype=self.dtype, device=self.device
+                s_in, self.stride_max, dtype=self.dtype, device=self.device,
             ),
         )
         return s_out
+
+    def __pow_transform(self : nn.Module, p_in):  # born stride entre 0 et 2N
+        p_out = torch.minimum(
+            torch.maximum(
+                p_in,
+                torch.full_like(
+                    p_in, self.pow_min, dtype=self.dtype, device=self.device,
+                ),
+            ),
+            torch.full_like(
+                p_in, self.pow_max, dtype=self.dtype, device=self.device,
+            ),
+        )
+        return p_out
 
     @property
     def actual_win_length(self):  # contraints
@@ -725,6 +749,10 @@ class FDSTFT(nn.Module):
         return self.stride_transform(self.strides)
 
     @property
+    def actual_pow(self):  # pow contraints
+        return self.pow_transform(self.win_pow)
+
+    @property
     def frames(self):
         # Compute the temporal position (indices) of frames (support)
         expanded_stride = self.actual_strides.expand((self.T,))
@@ -732,7 +760,7 @@ class FDSTFT(nn.Module):
         if self.first_frame:
             frames[0] = (
                 self.actual_win_length.expand((self.N, self.T))[:, 0].max(
-                    dim=0, keepdim=False
+                    dim=0, keepdim=False,
                 )[0]
                 - self.N
             ) / 2
@@ -752,10 +780,10 @@ class FDSTFT(nn.Module):
             torch.cat(
                 (
                     torch.tensor(
-                        [self.N], dtype=self.dtype, device=self.device
+                        [self.N], dtype=self.dtype, device=self.device,
                     ),
                     self.actual_win_length.expand((self.N, self.T)).max(
-                        dim=0, keepdim=False
+                        dim=0, keepdim=False,
                     )[0],
                 ),
                 dim=0,
@@ -765,51 +793,38 @@ class FDSTFT(nn.Module):
         effective_strides = effective_strides - cat
         return effective_strides
 
-    def forward(self, x):
+    def forward(self : nn.Module, x):
         # Perform the forward STFT and extract the magnitude, phase, real, and imaginary parts
-        stft = self.stft(x, 'forward')
-        # real, imag, spec, phase = stft.real, stft.imag, (stft + torch.finfo(
-        #    x.dtype).eps).abs().pow(self.pow)[:, :self.F], stft.angle()[:, :self.F]
-        print('new')
+        stft = self.stft(x, "forward")
         spec = (stft + torch.finfo(x.dtype).eps).abs().pow(self.pow)
         return spec, stft  # , real, imag, phase
 
-    def backward(self, x, dl_ds):
+    def backward(self: nn.Module, x: torch.tensor, dl_ds: torch.tensor) -> torch.tensor:
         # Compute the gradient of the loss w.r.t. window length parameter with the chain rule
-        dstft_dp = self.stft(x, 'backward')
-        # dl_dp = (dl_ds.real * dstft_dp.real + dl_ds.imag * dstft_dp.imag).sum()
+        dstft_dp = self.stft(x, "backward")
         dl_dp = torch.conj(dl_ds) * dstft_dp
-        # print('dl_dp', dl_dp.shape, self.win_length.shape)
         dl_dp = dl_dp.sum().real.expand(self.win_length.shape)
-        # print('dl_dp', dl_dp.shape, self.win_length.shape)
         return dl_dp
 
-    def stft(self, x: torch.tensor, direction: str):
+    def stft(self : nn.Module, x: torch.tensor, direction: str):
         # batch_size, length, device, dtype = x.shape[0], x.shape[-1], x.device, x.dtype
 
         # Generate strided signal and shift idx_frac
         strided_x, idx_frac = self.stride(x)  # B, T, N; T
-        # print("strided_x", strided_x.shape)
+
 
         # Generate the tapering window function for the STFT
         self.tap_win = self.window_function(
-            direction=direction, idx_frac=idx_frac
+            direction=direction, idx_frac=idx_frac,
         ).permute(1, 0)  # T, N
-        # print("tap_win", self.tap_win.shape)
 
         # Compute tapered x
         self.strided_x = strided_x[:, :, :]  # B, T, N
         self.tap_win = self.tap_win[None, :, :]  # 1, T, 1
-
         self.tapered_x = self.strided_x * self.tap_win  # B, T, N,
-        # print("tapered_x", tapered_x.shape)
 
-        # print(tapered_x.shape)
-        # spectr = torch.fft.fft(self.tapered_x)  # B, T, N
         spectr = torch.fft.rfft(self.tapered_x)
-        # print("spectrum", spectr.shape)
 
-        # print(spectr.shape)
         shift = torch.arange(
             end=self.F,
             device=self.device,
@@ -818,16 +833,11 @@ class FDSTFT(nn.Module):
         )
         shift = idx_frac[:, None] * shift[None, :]  # T, N
         shift = torch.exp(2j * pi * shift / self.N)[None, ...]  # 1, T, N
-        # print("shift", shift.shape)
 
         stft = spectr * shift
-        # print("stft", stft.shape)
+        return stft.permute(0, 2, 1)
 
-        # B, N, T           #stft = stft.transpose(-1, -2)
-        stft = stft.permute(0, 2, 1)
-        return stft
-
-    def stride(self, x) -> torch.tensor:
+    def stride(self : nn.Module, x: torch.tensor) -> torch.tensor:
         # frames index and strided x
         idx_floor = self.frames.floor()
         idx_frac = self.frames - idx_floor
@@ -840,58 +850,46 @@ class FDSTFT(nn.Module):
         strided_x[:, idx_floor < 0] = 0
         return strided_x, idx_frac
 
-    def window_function(self, direction: str, idx_frac) -> torch.tensor:
-        if self.tapering_function not in {'hann', 'hanning'}:
+    def window_function(self : nn.Module, direction: str, idx_frac) -> torch.tensor:
+        if self.tapering_function not in {"hann", "hanning"}:
             raise ValueError(
-                f"tapering_function must be one of '{('hann', 'hanning')}', but got padding_mode='{self.tapering_function}'"
+                f"tapering_function must be one of '{('hann', 'hanning')}', but got padding_mode='{self.tapering_function}'",
             )
         else:
             # Create an array of indices to use as the base for the window function
             base = torch.arange(
-                0, self.N, 1, dtype=self.dtype, device=self.device
+                0, self.N, 1, dtype=self.dtype, device=self.device,
             )[:, None].expand([-1, self.T])
             base = base - idx_frac
             # Expand the win_length parameter to match the shape of the base array
-            # if self.actual_win_length.dim() == 3:
-            #    self.expanded_win_length = self.actual_win_length.expand([self.N, self.N, self.T])
-            # elif self.actual_win_length.dim() == 1:
-            #    self.expanded_win_length = self.actual_win_length[:, None, None].expand([self.N, self.N, self.T])
-            # elif self.actual_win_length.dim() == 2 and self.actual_win_length.shape[-1] == self.T:
-            #    self.expanded_win_length = self.actual_win_length[:, None, :].expand([self.N, self.N, self.T])
-            # elif self.actual_win_length.dim() == 2 and self.actual_win_length.shape[-1] == self.N:
-            #    self.expanded_win_length = self.actual_win_length[:, :, None].expand([self.N, self.N, self.T])
 
         # calculate the tapering function and its derivate w.r.t. window length
         mask1 = base.ge(torch.ceil((self.N - 1 + self.actual_win_length) / 2))
         mask2 = base.le(torch.floor((self.N - 1 - self.actual_win_length) / 2))
         if (
-            self.tapering_function == 'hann'
-            or self.tapering_function == 'hanning'
+            self.tapering_function == "hann"
+            or self.tapering_function == "hanning"
         ):
-            if direction == 'forward':
+            if direction == "forward":
                 self.tap_win = 0.5 - 0.5 * torch.cos(
                     2
                     * pi
                     * (base + (self.actual_win_length - self.N + 1) / 2)
-                    / self.actual_win_length
+                    / self.actual_win_length,
                 )
-                # mask1 = base.ge(torch.ceil( (self.N-1+self.actual_win_length)/2))
-                # mask2 = base.le(torch.floor((self.N-1-self.actual_win_length)/2))
                 self.tap_win[mask1] = 0
                 self.tap_win[mask2] = 0
                 self.tap_win = self.tap_win / self.tap_win.sum(
-                    dim=0, keepdim=True
+                    dim=0, keepdim=True,
                 )
                 return self.tap_win.pow(self.win_pow)
 
-            elif direction == 'backward':
-                # f = torch.sin(2 * pi * (base - (self.N-1)/2) /
-                #             self.actual_win_length)
+            elif direction == "backward":
                 f = torch.sin(
                     2
                     * pi
                     * (base + (self.actual_win_length - self.N + 1) / 2)
-                    / self.actual_win_length
+                    / self.actual_win_length,
                 )
                 d_tap_win = (
                     -pi
@@ -903,11 +901,12 @@ class FDSTFT(nn.Module):
                 d_tap_win[mask2] = 0
                 d_tap_win = d_tap_win / self.N * 2
                 return d_tap_win
+        return None
 
     def coverage(self):  # in [0, 1]
         # compute coverage
         expanded_win, _ = self.actual_win_length.expand((self.N, self.T)).min(
-            dim=0, keepdim=False
+            dim=0, keepdim=False,
         )
         cov = expanded_win[0]
         maxi = self.frames[0] + self.N / 2 + expanded_win[0] / 2
@@ -944,41 +943,38 @@ class FDSTFT(nn.Module):
         f_hat=None,
         fs=None,
     ):
+        f_max = spec.shape[-2] if fs is None else fs / 2
         plt.figure(figsize=figsize)
-        plt.title('Spectrogram')
+        plt.title("Spectrogram")
         ax = plt.subplot()
-        if fs is None:
-            f_max = spec.shape[-2]
-        else:
-            f_max = fs / 2
         im = ax.imshow(
             spec[0].detach().cpu().log(),
-            aspect='auto',
-            origin='lower',
-            cmap='jet',
+            aspect="auto",
+            origin="lower",
+            cmap="jet",
             extent=[0, spec.shape[-1], 0, f_max],
         )
-        plt.ylabel('frequencies')
-        plt.xlabel('frames')
+        plt.ylabel("frequencies")
+        plt.xlabel("frames")
         if bar == True:
             plt.colorbar(im, ax=ax)
         if f_hat is not None:
             for f in f_hat:
-                plt.plot(f, linewidth=0.5, c='k', alpha=0.7)
+                plt.plot(f, linewidth=0.5, c="k", alpha=0.7)
         plt.show()
 
         if weights == True:
             plt.figure(figsize=figsize)
-            plt.title('Distribution of window lengths')
+            plt.title("Distribution of window lengths")
             ax = plt.subplot()
             im = ax.imshow(
                 self.actual_win_length[: self.F].detach().cpu(),
-                aspect='auto',
-                origin='lower',
-                cmap='jet',
+                aspect="auto",
+                origin="lower",
+                cmap="jet",
             )
-            ax.set_ylabel('frequencies')
-            ax.set_xlabel('frames')
+            ax.set_ylabel("frequencies")
+            ax.set_xlabel("frames")
             if bar == True:
                 plt.colorbar(im, ax=ax)
                 im.set_clim(self.win_min, self.win_max)
@@ -997,13 +993,13 @@ class FDSTFT(nn.Module):
                     - i
                     - 1.3
                     + 150 * self.tap_win[:, i, :].squeeze().detach().cpu(),
-                    c='#1f77b4',
+                    c="#1f77b4",
                 )
 
             if marklist is not None:
                 for elem in marklist:
-                    plt.axvline(elem, 0, self.T, c='gray')
+                    plt.axvline(elem, 0, self.T, c="gray")
             else:
-                ax.axvline(x=0, ymin=0, ymax=self.T, c='gray')
-                ax.axvline(x=x.shape[-1], ymin=0, ymax=self.T, c='gray')
+                ax.axvline(x=0, ymin=0, ymax=self.T, c="gray")
+                ax.axvline(x=x.shape[-1], ymin=0, ymax=self.T, c="gray")
             plt.show()

@@ -1,7 +1,8 @@
 name: dstft_env
 channels:
-  - pytorch
+  - pytorch  
   - conda-forge
+  - nvidia
   - defaults
 dependencies:
   - python=3.11

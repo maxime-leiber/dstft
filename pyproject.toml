@@ -21,12 +21,7 @@ ignore = [
 ]
 
 
-fixable = [
-    "F401",  # Remove unused imports.
-    "NPY001",  # Fix numpy types, which are removed in 1.24.
-#    "RUF100",  # Remove unused noqa comments.
-#    "ALL",
-]
+fixable = ["ALL"]
 
 
 [tool.ruff.format]
