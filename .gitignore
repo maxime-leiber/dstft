@@ -166,6 +166,8 @@ dstft/synchrosqueeze.py
 dstft/tracking.py
 tmp/
 tmp/*
+data/
+data/*
 notebooks/0_.ipynb
 notebooks/isma.ipynb
 notebooks/runtime1.ipynb
