@@ -1,36 +1,95 @@
-[tool.ruff]
-line-length = 79  # Set the maximum line length to 79.
-fix = true  # Enable fix behavior by-default when running ruff
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
-
-select = [
-    #"A",  # prevent using keywords that clobber python builtins
-    "B",  # bugbear: security warnings
-    "E",  # pycodestyle
-    "F",  # pyflakes
-    "ISC",  # implicit string concatenation
-    "UP",  # alert you when better syntax is available in your python version
-    "RUF",  # the ruff developer's own rules
-    
+[project]
+name = "dstft"
+version = "0.1.0"
+description = "Differentiable Short-Time Fourier Transform (DSTFT) for PyTorch"
+readme = { file = "README.md", content-type = "text/markdown" }
+authors = [{ name = "Maxime" }]
+license = "MIT"
+requires-python = ">=3.8"
+dependencies = ["torch>=1.10", "matplotlib", "numpy"]
+urls = { "Homepage" = "https://github.com/USERNAME/DSTFT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "sphinx",
+    "pytest",
+    "pytest-cov",
+    "nbval",
+    "black",
+    "isort",
+    "flake8",
+    "mypy",
+    "pre-commit",
+    "twine",
+    "build",
+    "wheel",
+    "ipywidgets",
+]
+docs = ["sphinx", "sphinx_rtd_theme", "myst-parser"]
 
-ignore = [
-    "E712",  # Allow using if x == False, as it's not always equivalent to if x.
-    "E501",  # Supress line-too-long warnings: trust black's judgement on this one.
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["-v", "--tb=short", "--strict-markers", "--disable-warnings"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
 ]
 
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
 
-fixable = ["ALL"]
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["dstft"]
 
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
 
-[tool.ruff.format]
-preview = true
-quote-style = "double"
-indent-style = "space"
-docstring-code-format = true
-line-ending = "auto" # automatically detect the appropriate line ending.
-skip-magic-trailing-comma = true
-
-[tool.ruff.lint]
-select = ["ALL"]
+[[tool.mypy.overrides]]
+module = ["torch.*", "matplotlib.*", "numpy.*"]
+ignore_missing_imports = true

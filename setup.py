@@ -1,7 +1,7 @@
-"""Package setup using `setuptools`.
-Please refer to the "setup.cfg" file for detailed properties of the package.
-"""
+#!/usr/bin/env python3
+"""Setup script for DSTFT package."""
 
-import setuptools
+from setuptools import setup
 
-setuptools.setup()
+if __name__ == "__main__":
+    setup()

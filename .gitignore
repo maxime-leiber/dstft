@@ -1,125 +1,50 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
+*.pyd
+*.pyo
+*.pkl
 *.egg-info/
-.installed.cfg
 *.egg
-MANIFEST
-
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
 *.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+*.sqlite3
+*.db
+*.DS_Store
+*.swp
+*.bak
+*.tmp
+*.old
+*.orig
+*.out
+*.pdf
+*.npy
+*.npz
+*.mat
+*.zip
+*.tar.gz
+*.tar
+*.tgz
+*.gz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.h5
+*.pth
+*.onnx
+*.pt
+*.ckpt
+*.weights
+*.pb
+*.tflite
+*.onnx
+*.csv
+*.tsv
+*.xls*
+*.ipynb_checkpoints
 
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
-
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
-
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/#use-with-ide
-.pdm.toml
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
+# Environnements
 .env
 .venv
 env/
@@ -128,59 +53,51 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
+# IDE
+.idea/
+.vscode/
 .spyderproject
 .spyproject
-
-# Rope project settings
 .ropeproject
 
-# mkdocs documentation
-/site
-
-# mypy
+# mypy, pytype, pyre
 .mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
+.pytype/
 .pyre/
 
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
+# Cython
 cython_debug/
 
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+# Sphinx
+/build/
+/dist/
+/docs/_build/
+/site
 
-TODO.md
-dstft/loss.py
-dstft/optim.py
-dstft/synchrosqueeze.py
-dstft/tracking.py
-tmp/
-tmp/*
+# Tests
+.coverage
+.tox/
+.nox/
+pytest_cache/
+
+# CI/CD
+/.github/workflows/
+
+# Data, figures, notebooks
+fig/
 data/
-data/*
-notebooks/0_.ipynb
-notebooks/isma.ipynb
-notebooks/runtime1.ipynb
-notebooks/sst.ipynb
-notebooks/test.ipynb
-notebooks/illustration.ipynb
-notebooks/autre.ipynb
-notebooks/1_tf_varying_window_length.ipynb
-notebooks/2_tf_varying_window_length.ipynb
-notebooks/3_tf_varying_window_length.ipynb
-notebooks/4_tracking_frequency.ipynb
-notebooks/5_tracking_frequency.ipynb
-notebooks/6_time_varying_window_and_hop_length.ipynb
-notebooks/7_time_varying_window_and_hop_length.ipynb
-notebooks/8_tf_speech.ipynb
-notebooks/9_car_kaist.ipynb
+notebooks/
+*.gif
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.pdf
+
+# DSTFT legacy
+loss.py
+optim.py
+synchrosqueeze.py
+tracking.py
+tmp/
+tmp/* 
