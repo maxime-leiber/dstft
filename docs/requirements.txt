@@ -3,4 +3,6 @@ sphinx_rtd_theme
 myst-parser
 nbsphinx
 matplotlib
-torch 
+torch
+sphinx-prompt
+sphinx-copybutton 
