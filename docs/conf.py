@@ -48,3 +48,11 @@ nbsphinx_execute = "always"
 latex_engine = "xelatex"
 latex_theme = "manual"
 latex_theme_options = {}
+
+autosummary_generate = True
+autodoc_default_options = {
+    "members": True,
+    "undoc-members": True,
+    "show-inheritance": True,
+    "inherited-members": True,
+}
