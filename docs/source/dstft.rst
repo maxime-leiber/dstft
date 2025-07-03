@@ -1,6 +1,11 @@
 dstft package
 =============
 
+.. automodule:: dstft
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -12,18 +17,18 @@ dstft.adstft module
    :undoc-members:
    :show-inheritance:
 
-dstft.dstft module
-------------------
+dstft.base module
+-----------------
 
-.. automodule:: dstft.dstft
+.. automodule:: dstft.base
    :members:
    :undoc-members:
    :show-inheritance:
 
-Module contents
----------------
+dstft.dstft module
+------------------
 
-.. automodule:: dstft
+.. automodule:: dstft.dstft
    :members:
    :undoc-members:
    :show-inheritance:
