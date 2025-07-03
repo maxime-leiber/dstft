@@ -2,14 +2,13 @@
 
 [![PyPI Version](https://img.shields.io/badge/pypi-v0.2.0-blue.svg)](https://pypi.org/project/dstft/)
 [![Documentation Status](https://readthedocs.org/projects/dstft/badge/?version=latest)](https://dstft.readthedocs.io/en/latest/?badge=latest)
-[![Coverage Status](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](./coverage.xml)
-[![License](https://img.shields.io/github/license/maxime-leiber/dstft.svg)](./LICENSE)
+
 
 **DSTFT** (Differentiable Short-Time Fourier Transform) is a PyTorch module for differentiable short-time Fourier transform, supporting adaptive windows and strides.
 
 ---
 
-![opt gif](resources/opt.gif)
+![opt gif](docs/resources/opt.gif)
 
 ---
 
