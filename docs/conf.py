@@ -29,7 +29,7 @@ extensions = [
     "sphinx_rtd_theme",
     "myst_parser",
     "nbsphinx",
-    "sphinx-prompt",
+    "sphinx_prompt",
     "sphinx_copybutton",
 ]
 source_suffix = [".rst", ".md"]
