@@ -123,3 +123,13 @@ notebooks/.ipynb_checkpoints/
 # Mac and system files
 .DS_Store
 Thumbs.db
+
+.coverage
+.flake8
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.vscode/
+.ipynb_checkpoints/
+.pre-commit-config.yaml
+
