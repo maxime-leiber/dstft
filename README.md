@@ -8,7 +8,11 @@
 
 ---
 
-![opt gif](docs/resources/opt.gif)
+<!-- For GitHub -->
+<img src="docs/_static//opt.gif" alt="opt gif" width="600"/>
+
+<!-- For Sphinx (when included in docs) -->
+<!-- ![opt gif](_static/opt.gif) -->
 
 ---
 
