@@ -96,3 +96,30 @@ tmp/
 
 notebooks/
 notebooks/*
+
+# Coverage and test reports
+coverage*.txt
+coverage.xml
+htmlcov/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Jupyter notebook checkpoints
+notebooks/.ipynb_checkpoints/
+
+# VSCode and editor files
+.vscode/
+*.swp
+
+# Mac and system files
+.DS_Store
+Thumbs.db
