@@ -86,7 +86,7 @@ pytest_cache/
 # Data, figures, notebooks
 fig/
 data/
-notebooks/
+tmp/
 *.gif
 *.png
 *.jpg
@@ -94,10 +94,5 @@ notebooks/
 *.svg
 *.pdf
 
-# DSTFT legacy
-loss.py
-optim.py
-synchrosqueeze.py
-tracking.py
-tmp/
-tmp/* 
+notebooks/
+notebooks/*
