@@ -6,6 +6,7 @@ from math import pi
 
 import torch
 
+
 _FFT_FORWARD_CACHE: dict[tuple[int, torch.device, torch.dtype], torch.Tensor] = {}
 _DFT_TWIDDLE_CACHE: dict[tuple[int, int, torch.device, torch.dtype], torch.Tensor] = {}
 

@@ -17,6 +17,7 @@ from torch import nn
 
 from . import _core, windows
 
+
 Normalization: TypeAlias = None | Literal["unit", "paper", "contract"]
 WindowMode: TypeAlias = Literal[
     "fixed",
