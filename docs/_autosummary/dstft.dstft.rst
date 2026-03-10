@@ -9,4 +9,5 @@ dstft.dstft
    .. autosummary::
    
       DSTFT
+      WindowFn
    

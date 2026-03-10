@@ -1,98 +1,126 @@
 # DSTFT
 
-[![PyPI Version](https://img.shields.io/badge/pypi-v0.2.0-blue.svg)](https://pypi.org/project/dstft/)
+[![PyPI Version](https://img.shields.io/badge/pypi-v3.0.0-blue.svg)](https://pypi.org/project/dstft/)
 [![Documentation Status](https://readthedocs.org/projects/dstft/badge/?version=latest)](https://dstft.readthedocs.io/en/latest/?badge=latest)
+[![CI](https://github.com/maxime-leiber/dstft/actions/workflows/ci.yml/badge.svg)](https://github.com/maxime-leiber/dstft/actions/workflows/ci.yml)
+[![IEEE TSP](https://img.shields.io/badge/IEEE_TSP-DSTFT-00629B?logo=ieee&logoColor=white)](https://ieeexplore.ieee.org/abstract/document/11220928)
 
-
-**DSTFT** (Differentiable Short-Time Fourier Transform) is a PyTorch module for differentiable short-time Fourier transform, supporting adaptive windows and strides.
+**DSTFT** (Differentiable Short-Time Fourier Transform) is a PyTorch module for a differentiable short-time Fourier transform, supporting learnable/adaptive parameters.
 
 ---
 
 <!-- For GitHub -->
-<img src="docs/_static//opt.gif" alt="opt gif" width="600"/>
+<img src="docs/_static/opt.gif" alt="Optimization demo" width="600"/>
 
-<!-- For Sphinx (when included in docs) -->
-<!-- ![opt gif](_static/opt.gif) -->
+Gradient-based optimization of DSTFT parameters (example: window length).
 
 ---
 
 ## Features
-- Differentiable STFT 
-- Adaptive DSTFT 
 
+- Differentiable STFT (learnable frame centers, window lengths, and hop lengths)
+- FFT backend for efficient training and inference
+- Exact reconstruction utilities (see tests)
 
 ## Installation
 
-### Using Conda/Mamba and uv pip (recommended)
+### Universal (pip/venv)
 
-Create a new environment:
-```bash
-mamba create -n dstft python=3.11 pip=20.2 uv
-mamba activate dstft
-```
-
-Install dependencies:
-```bash
-uv pip install -e .
-```
-
-### Using pip/venv (no conda required)
+Create and activate a virtual environment, then install in editable mode:
 
 ```bash
 python -m venv venv
 source venv/bin/activate
+pip install -U pip
 pip install -e .
 ```
 
-## Usage Example
+### Conda/Mamba + uv (recommended)
+
+Create a new environment:
+
+```bash
+mamba create -n dstft python=3.11 pip
+mamba activate dstft
+pip install -U uv
+```
+
+Install the package:
+
+```bash
+uv pip install -e .
+```
+
+Install optional dependencies:
+
+```bash
+uv pip install -e ".[dev,docs]"
+```
+
+For development tools:
+
+```bash
+pip install -e ".[dev]"
+```
+
+For documentation dependencies:
+
+```bash
+pip install -e ".[docs]"
+```
+
+## Usage example
 
 ```python
 import torch
-from dstft import DSTFT, ADSTFT, __version__
 
-print("DSTFT version:", __version__)
+from dstft import DSTFT
 
-# Example input: batch of 1, 1D signal of length 1024
 torch.manual_seed(0)
 x = torch.randn(1, 1024)
 
-# Create a DSTFT instance
-dstft = DSTFT(x, win_length=128, support=128, stride=32)
+dstft = DSTFT(
+    n_fft=256,
+    hop_length=64.0,
+    win_length=256.0,
+    window_mode="constant",
+)
+dstft.initialize(x)
 
-# Forward pass
 spec, stft = dstft(x)
-
-# Plot the spectrogram
-dstft.plot(spec)
 ```
 
-## Documentation
+## Phase convention
 
-Full documentation is generated with Sphinx and available at: [https://dstft.readthedocs.io/en/latest/](https://dstft.readthedocs.io/en/latest/)
-
-## Examples
-
-See the `notebooks/` folder for advanced use cases (speech, tracking, etc).
+This implementation follows the phase convention described in Eq. (25) of the
+reference paper for non-integer frame positions. See
+`tests/test_fft_matches_paper_eq25_reference.py`.
 
 ## License
 
-This project is licensed under the terms of the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the terms of the MIT License. See the
+[LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-Contributions are welcome! Please open issues or pull requests for bug fixes, improvements, or new features.
+Contributions are welcome! Please open issues or pull requests for bug fixes,
+improvements, or new features.
 
 ## Citation
 
 Please cite this repository if you use it in your scientific work:
 
 ```bibtex
-@article{leiber2025learnable,
-  title={Learnable Adaptive Time-Frequency Representation via Differentiable Short-Time Fourier Transform},
-  author={Leiber, Maxime and Marnissi, Yosra and Barrau, Axel and Meignen, Sylvain and Massouli{\~A}{\v{S}}, Laurent},
-  journal={arXiv preprint arXiv:2506.21440},
-  year={2025}
-}
+@ARTICLE{11220928,
+  author={Leiber, Maxime and Marnissi, Yosra and Barrau, Axel and Meignen, Sylvain and Massoulié, Laurent},
+  journal={IEEE Transactions on Signal Processing},
+  title={Optimal Adaptive Time-Frequency Representation via Differentiable Short-Time Fourier Transform},
+  year={2025},
+  volume={73},
+  number={},
+  pages={5047-5059},
+  keywords={Windows;Time-frequency analysis;Optimization;Spectrogram;Computational efficiency;Tuning;Signal resolution;Neural networks;Discrete Fourier transforms;Backpropagation;Short-time Fourier transform;spectrogram;differentiable STFT;learnable STFT parameters;adaptive time-frequency representation},
+  doi={10.1109/TSP.2025.3624477}}
 @inproceedings{leiber2022differentiable,
   title={A differentiable short-time Fourier transform with respect to the window length},
   author={Leiber, Maxime and Barrau, Axel and Marnissi, Yosra and Abboud, Dany},
@@ -119,7 +147,7 @@ Please cite this repository if you use it in your scientific work:
 }
 ```
 
-[![Paper1](http://img.shields.io/badge/paper1-arxiv-b31b1b.svg)](https://arxiv.org/pdf/2506.21440)
-[![Paper2](http://img.shields.io/badge/paper2-arxiv-b31b1b.svg)](https://arxiv.org/abs/2208.10886)
-[![Paper3](http://img.shields.io/badge/paper3-arxiv-b31b1b.svg)](https://arxiv.org/abs/2308.02418)
-[![Paper4](http://img.shields.io-badge/paper4-arxiv-b31b1b.svg)](https://arxiv.org/abs/2308.02421)
+[![IEEE TSP](https://img.shields.io/badge/IEEE_TSP-DSTFT-00629B?logo=ieee&logoColor=white)](https://ieeexplore.ieee.org/abstract/document/11220928)
+[![EUSIPCO](https://img.shields.io/badge/EUSIPCO-2208.10886-B31B1B?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2208.10886)
+[![ICASSP](https://img.shields.io/badge/ICASSP-2506.21440-B31B1B?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2308.02418)
+[![SSP Workshop](https://img.shields.io/badge/SSP_Workshop-2308.02418-B31B1B?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2308.02421)

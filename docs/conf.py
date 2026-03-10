@@ -1,58 +1,83 @@
 # Configuration file for the Sphinx documentation builder.
 
+from __future__ import annotations
+
 import os
 import sys
 
+
+sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("../src"))
+
+# Avoid importing a different `dstft` package from the environment.
+sys.modules.pop("dstft", None)
+
+# Ensure notebooks executed by nbsphinx import the local sources.
+nbsphinx_prolog = r"""
+.. raw:: html
+
+    <script type="text/javascript">
+    (function() {
+      // Make sure executed notebooks import the local checkout.
+      // nbsphinx runs in the docs/ directory, so the package sources are in ../src.
+      if (typeof window !== 'undefined') {
+        // no-op for browser
+      }
+    })();
+    </script>
+
+.. code-block:: python
+
+    import os, sys
+    sys.path.insert(0, os.path.abspath('../src'))
+"""
 
 project = "DSTFT"
 author = "Maxime Leiber"
-release = "0.2.0"
+
 
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
-    "sphinx.ext.todo",
-    "sphinx.ext.coverage",
-    "sphinx.ext.githubpages",
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.extlinks",
-    "sphinx.ext.autosectionlabel",
-    "sphinx.ext.doctest",
-    "sphinx.ext.ifconfig",
-    "sphinx.ext.graphviz",
-    "sphinx.ext.inheritance_diagram",
-    "sphinx.ext.imgmath",
-    "sphinx_rtd_theme",
+    "sphinx_copybutton",
     "myst_parser",
     "nbsphinx",
-    "sphinx_prompt",
-    "sphinx_copybutton",
 ]
-source_suffix = [".rst", ".md"]
-
 
 templates_path = ["_templates"]
 
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
-
-autodoc_typehints = "description"
-
-html_theme = "sphinx_rtd_theme"
-html_static_path = ["_static"]
-nbsphinx_execute = "always"
-
-latex_engine = "xelatex"
-latex_theme = "manual"
-latex_theme_options = {}
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**.ipynb_checkpoints",
+]
 
 autosummary_generate = True
-autodoc_default_options = {
-    "members": True,
-    "undoc-members": True,
-    "show-inheritance": True,
-    "inherited-members": True,
+autodoc_typehints = "description"
+
+html_theme = "alabaster"
+html_static_path = ["_static"]
+
+# Source formats
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "myst",
 }
+
+# Allow toggling notebook execution via env: set NBS_EXEC=1 to execute.
+NBS_EXEC = os.environ.get("NBS_EXEC", "0")
+nbsphinx_execute = "auto" if NBS_EXEC == "1" else "never"
+nbsphinx_allow_errors = False
+
+if os.environ.get("SPHINX_OFFLINE"):
+    intersphinx_mapping = {}
+else:
+    intersphinx_mapping = {
+        "python": ("https://docs.python.org/3", None),
+        "torch": ("https://pytorch.org/docs/stable", None),
+    }

@@ -1,8 +1,4 @@
-sphinx
-sphinx_rtd_theme
-myst-parser
-nbsphinx
-matplotlib
-torch
-sphinx-prompt
-sphinx-copybutton 
+sphinx>=7.0
+sphinx-copybutton>=0.5
+nbsphinx>=0.9
+myst-parser>=2.0

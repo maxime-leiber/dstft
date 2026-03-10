@@ -10,6 +10,6 @@
    :toctree:
    :recursive:
 
-   adstft
-   base
    dstft
+   visualization
+   windows

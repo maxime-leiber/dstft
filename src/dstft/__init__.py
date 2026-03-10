@@ -1,18 +1,10 @@
-from .adstft import ADSTFT as ADSTFT
-from .base import BaseSTFT
-from .dstft import DSTFT as DSTFT
+"""DSTFT package.
 
-try:
-    from importlib.metadata import PackageNotFoundError, version
-except ImportError:
-    from importlib_metadata import (  # type: ignore
-        PackageNotFoundError,
-        version,
-    )
+The public API is the `DSTFT` class.
+"""
 
-try:
-    __version__ = version("dstft")
-except PackageNotFoundError:
-    __version__ = "0.2.0"  # fallback to pyproject.toml version
+from .dstft import DSTFT
+from .visualization import plot_spec, plot_win_lengths
 
-__all__ = ["ADSTFT", "DSTFT", "BaseSTFT"]
+
+__all__ = ["DSTFT", "plot_spec", "plot_win_lengths"]

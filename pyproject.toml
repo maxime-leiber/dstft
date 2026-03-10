@@ -1,16 +1,16 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "dstft"
-version = "2.0.0"
+version = "3.0.0"
 authors = [{ name = "Maxime Leiber" }]
 description = "Differentiable Short-Time Fourier Transform (DSTFT) for PyTorch"
 readme = { file = "README.md", content-type = "text/markdown" }
 license = "MIT"
-requires-python = ">=3.8"
-dependencies = ["torch>=1.10", "matplotlib", "numpy"]
+requires-python = ">=3.10"
+dependencies = ["torch>=2.1", "matplotlib", "torchaudio"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
@@ -19,26 +19,24 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/maxime-leiber/dstft"
-Documentation = "https://dstft.readthedocs.io/en/latest/"
+Documentation = "https://dstft.readthedocs.io"
+Issues = "https://github.com/maxime-leiber/dstft/issues"
 
 
 [project.optional-dependencies]
 dev = [
-    "sphinx",
-    "pytest",
-    "pytest-cov",
-    "nbval",
-    "black",
-    "isort",
-    "flake8",
-    "mypy",
-    "pre-commit",
-    "twine",
-    "build",
-    "wheel",
-    "ipywidgets",
+    "ruff>=0.1.0",
+    "pytest>=7.0.0",
 ]
-docs = ["sphinx", "sphinx_rtd_theme", "myst-parser"]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-copybutton>=0.5",
+    "myst-parser>=2.0",
+    "nbsphinx>=0.9",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -55,46 +53,39 @@ markers = [
     "unit: marks tests as unit tests",
 ]
 
-[tool.black]
+[tool.ruff]
 line-length = 88
-target-version = ['py38']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
+src = ["src"]
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 88
-known_first_party = ["dstft"]
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E203", # whitespace before ':' (not compatible with ruff format)
+    "E501", # line length (handled case-by-case)
+]
 
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
-show_error_codes = true
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"] # Allow unused imports in __init__.py
+"tests/**/*.py" = ["ARG"]        # Allow unused arguments in tests
+"src/dstft/_core.py" = ["ARG"]   # Core kernels accept a common signature
 
-[[tool.mypy.overrides]]
-module = ["torch.*", "matplotlib.*", "numpy.*"]
-ignore_missing_imports = true
+[tool.ruff.lint.isort]
+known-first-party = ["dstft"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
