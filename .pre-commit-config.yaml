@@ -1,0 +1,13 @@
+# Fichier de configuration pour pre-commit
+# Voir https://pre-commit.com pour plus d'informations
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Mettez à jour 'rev' vers la dernière version de ruff-pre-commit si nécessaire
+    rev: v0.4.1
+    hooks:
+      # Exécute le linter ruff et corrige automatiquement les problèmes simples
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      # Exécute le formateur ruff
+      - id: ruff-format

@@ -27,6 +27,7 @@ Issues = "https://github.com/maxime-leiber/dstft/issues"
 dev = [
     "ruff>=0.1.0",
     "pytest>=7.0.0",
+    "pre-commit>=3.0",
 ]
 docs = [
     "sphinx>=7.0",
