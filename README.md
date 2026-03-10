@@ -18,13 +18,12 @@ Gradient-based optimization of DSTFT parameters (example: window length).
 
 ## Features
 
-- Differentiable STFT (learnable frame centers, window lengths, and hop lengths)
-- FFT backend for efficient training and inference
-- Exact reconstruction utilities (see tests)
+- Differentiable STFT (learnable window lengths, and hop lengths)
+- FFT for DSTFT, DFT for adaptive DSTFT, inverse DSTFT
 
 ## Installation
 
-### Universal (pip/venv)
+### pip/venv
 
 Create and activate a virtual environment, then install in editable mode:
 
@@ -35,7 +34,7 @@ pip install -U pip
 pip install -e .
 ```
 
-### Conda/Mamba + uv (recommended)
+### Conda/Mamba + uv
 
 Create a new environment:
 
@@ -90,11 +89,6 @@ dstft.initialize(x)
 spec, stft = dstft(x)
 ```
 
-## Phase convention
-
-This implementation follows the phase convention described in Eq. (25) of the
-reference paper for non-integer frame positions. See
-`tests/test_fft_matches_paper_eq25_reference.py`.
 
 ## License
 
