@@ -6,4 +6,3 @@ API reference
    :recursive:
 
    dstft
-

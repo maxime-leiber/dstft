@@ -43,4 +43,3 @@ Install optional dependencies:
 .. code-block:: bash
 
    uv pip install -e ".[dev,docs]"
-

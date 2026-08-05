@@ -20,4 +20,3 @@ Quick example:
    dstft = DSTFT(n_fft=256, hop_length=64.0, win_length=256.0, window_mode="constant")
    dstft.initialize(x)
    spec, stft = dstft(x)
-
