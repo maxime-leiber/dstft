@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from math import pi
 
 import torch
@@ -581,12 +582,12 @@ def adstft_dft_adjoint(
 
 def cg_solve(
     *,
-    apply_mat: callable,
+    apply_mat: Callable[[torch.Tensor], torch.Tensor],
     b: torch.Tensor,
     x0: torch.Tensor | None = None,
     max_iter: int = 200,
     tol: float = 1e-10,
-    precond: callable | None = None,
+    precond: Callable[[torch.Tensor], torch.Tensor] | None = None,
 ) -> torch.Tensor:
     """Conjugate gradient solver for symmetric positive definite operators.
 
