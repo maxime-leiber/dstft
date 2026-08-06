@@ -24,13 +24,15 @@ jobs:
 
       - name: Run RepoAgent
         env:
-          OPENAI_API_KEY: ${{ secrets.REPOAGENT_API_KEY }}
+          # Gemini's OpenAI-compatible endpoint: repoagent (built on the
+          # OpenAI SDK) just needs an OpenAI-shaped API key + base_url.
+          OPENAI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           repoagent run \
             --target-repo-path . \
             --language English \
-            --model "${{ vars.REPOAGENT_MODEL || 'gpt-4o-mini' }}" \
-            --base-url "${{ vars.REPOAGENT_BASE_URL || 'https://api.openai.com/v1' }}" \
+            --model "${{ vars.REPOAGENT_MODEL || 'gemini-2.5-flash' }}" \
+            --base-url "${{ vars.REPOAGENT_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/' }}" \
             --print-hierarchy
 
       - name: Upload generated docs for review
