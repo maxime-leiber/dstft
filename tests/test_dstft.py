@@ -3,8 +3,14 @@ from __future__ import annotations
 import pytest
 import torch
 
+import dstft
 from dstft import DSTFT
 from dstft.dstft import HopMode, WindowMode
+
+
+def test_version_is_exposed() -> None:
+    assert isinstance(dstft.__version__, str)
+    assert dstft.__version__ != ""
 
 
 def test_forward_returns_spec_and_stft() -> None:
