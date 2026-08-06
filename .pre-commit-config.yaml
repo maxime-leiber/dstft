@@ -35,3 +35,11 @@ repos:
         types: [python]
         files: ^src/dstft/
         pass_filenames: false
+
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.7.0
+    hooks:
+      # Docstring coverage on src/dstft/ (config + threshold in pyproject.toml).
+      - id: interrogate
+        args: [-c, pyproject.toml]
+        pass_filenames: false

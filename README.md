@@ -1,8 +1,11 @@
 # DSTFT
 
-[![PyPI Version](https://img.shields.io/badge/pypi-v3.0.0-blue.svg)](https://pypi.org/project/dstft/)
+[![PyPI Version](https://img.shields.io/pypi/v/dstft.svg)](https://pypi.org/project/dstft/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/dstft.svg)](https://pypi.org/project/dstft/)
 [![Documentation Status](https://readthedocs.org/projects/dstft/badge/?version=latest)](https://dstft.readthedocs.io/en/latest/?badge=latest)
 [![CI](https://github.com/maxime-leiber/dstft/actions/workflows/ci.yml/badge.svg)](https://github.com/maxime-leiber/dstft/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/maxime-leiber/dstft/branch/main/graph/badge.svg)](https://codecov.io/gh/maxime-leiber/dstft)
+[![License](https://img.shields.io/github/license/maxime-leiber/dstft.svg)](LICENSE)
 [![IEEE TSP](https://img.shields.io/badge/IEEE_TSP-DSTFT-00629B?logo=ieee&logoColor=white)](https://ieeexplore.ieee.org/abstract/document/11220928)
 
 **DSTFT** (Differentiable Short-Time Fourier Transform) is a PyTorch module for a differentiable short-time Fourier transform, supporting learnable/adaptive parameters.
