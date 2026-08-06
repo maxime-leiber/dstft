@@ -1,0 +1,10 @@
+# setuptools-scm's sdist file-finder includes every git-tracked file by
+# default, which pulled in the whole repo (docs assets, notebooks, CI
+# configs) - ~8.4 MB for a package that only needs src/, tests/, LICENSE,
+# and README.md to install and run.
+prune docs
+prune notebooks
+prune .github
+exclude .readthedocs.yaml
+exclude .pre-commit-config.yaml
+exclude Makefile
