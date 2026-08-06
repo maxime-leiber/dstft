@@ -103,6 +103,21 @@ This project is licensed under the terms of the MIT License. See the
 Contributions are welcome! Please open issues or pull requests for bug fixes,
 improvements, or new features.
 
+## Releasing
+
+The package version is derived automatically from git tags (via
+`setuptools-scm`) — it is never edited by hand in `pyproject.toml`. To cut a
+release:
+
+```bash
+git tag v3.0.1
+git push origin v3.0.1
+```
+
+Then build and publish as usual (`python -m build && twine upload dist/*`).
+A tag on a commit with no uncommitted local changes produces an exact version
+(`3.0.1`); any other commit gets an automatic `.devN+g<hash>` suffix.
+
 ## Citation
 
 Please cite this repository if you use it in your scientific work:

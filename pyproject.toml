@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=68", "setuptools-scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "dstft"
-version = "3.0.0"
+dynamic = ["version"]
 authors = [{ name = "Maxime Leiber" }]
 description = "Differentiable Short-Time Fourier Transform (DSTFT) for PyTorch"
 readme = { file = "README.md", content-type = "text/markdown" }
@@ -47,6 +47,15 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools_scm]
+# Version comes from the nearest git tag (e.g. tag `v3.0.1` -> version
+# "3.0.1"; commits after a tag get an automatic dev suffix). No tag has
+# been created yet in this repo, so `fallback_version` keeps builds
+# working (matching the version currently published on PyPI) until the
+# first `vX.Y.Z` tag exists.
+fallback_version = "3.0.0"
+tag_regex = "^v(?P<version>\\d+\\.\\d+\\.\\d+)$"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
