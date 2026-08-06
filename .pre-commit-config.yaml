@@ -2,9 +2,19 @@
 # Voir https://pre-commit.com pour plus d'informations
 
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Mettez à jour 'rev' vers la dernière version de ruff-pre-commit si nécessaire
-    rev: v0.4.1
+    # Dependabot ("pre-commit" ecosystem) garde ce rev à jour automatiquement
+    rev: v0.16.1
     hooks:
       # Exécute le linter ruff et corrige automatiquement les problèmes simples
       - id: ruff

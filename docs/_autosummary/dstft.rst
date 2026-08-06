@@ -3,7 +3,7 @@
 
 .. automodule:: dstft
 
-   
+
 .. rubric:: Modules
 
 .. autosummary::
