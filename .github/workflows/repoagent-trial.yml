@@ -1,0 +1,45 @@
+name: RepoAgent trial
+
+# Manual trigger only, on purpose: we're validating that an API key/model
+# works and reviewing the generated docs' quality before deciding whether
+# to wire RepoAgent into pre-commit/CI for real (see TODO.md [+repoagent-key]).
+on:
+  workflow_dispatch: {}
+
+jobs:
+  trial:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install RepoAgent
+        run: |
+          python -m pip install --upgrade pip
+          pip install repoagent
+
+      - name: Run RepoAgent
+        env:
+          # Gemini's OpenAI-compatible endpoint: repoagent (built on the
+          # OpenAI SDK) just needs an OpenAI-shaped API key + base_url.
+          OPENAI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          repoagent run \
+            --target-repo-path . \
+            --language English \
+            --model "${{ vars.REPOAGENT_MODEL || 'gemini-2.5-flash' }}" \
+            --base-url "${{ vars.REPOAGENT_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/' }}" \
+            --print-hierarchy
+
+      - name: Upload generated docs for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repoagent-markdown-docs
+          path: markdown_docs
+          retention-days: 7
+          if-no-files-found: warn
