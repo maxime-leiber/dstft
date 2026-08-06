@@ -381,6 +381,7 @@ class DSTFT(nn.Module):
             raise RuntimeError("DSTFT must be initialized before inverse")
         if self._init_signal_length is None:
             raise RuntimeError("DSTFT initialization metadata is missing")
+        signal_length = self._init_signal_length
         method = method.lower()
         if method == "auto":
             method = (
@@ -426,7 +427,7 @@ class DSTFT(nn.Module):
                 analysis_window=analysis_window,
                 n_fft=self.n_fft,
                 frame_positions=frame_positions,
-                signal_length=int(self._init_signal_length),
+                signal_length=signal_length,
                 eps=self.eps,
             )
 
@@ -436,7 +437,7 @@ class DSTFT(nn.Module):
                     analysis_window=analysis_window.to(stft.dtype),
                     n_fft=self.n_fft,
                     frame_positions=frame_positions,
-                    signal_length=int(self._init_signal_length),
+                    signal_length=signal_length,
                 )
                 return (num.real / den[None, :]).to(inv_dtype)
 
@@ -446,7 +447,7 @@ class DSTFT(nn.Module):
                 analysis_window=analysis_window.to(stft.dtype),
                 n_fft=self.n_fft,
                 frame_positions=frame_positions,
-                signal_length=int(self._init_signal_length),
+                signal_length=signal_length,
             ).real
 
             def apply_a(x_time: torch.Tensor) -> torch.Tensor:
@@ -469,7 +470,7 @@ class DSTFT(nn.Module):
                     analysis_window=analysis_window.to(y_stft.dtype),
                     n_fft=self.n_fft,
                     frame_positions=frame_positions,
-                    signal_length=int(self._init_signal_length),
+                    signal_length=signal_length,
                 ).real
 
             def apply_mat(x_time: torch.Tensor) -> torch.Tensor:
@@ -514,7 +515,7 @@ class DSTFT(nn.Module):
             analysis_window=analysis_window.to(
                 device=frames_td.device, dtype=frames_td.dtype
             ),
-            signal_length=int(self._init_signal_length),
+            signal_length=signal_length,
             eps=self.eps,
         )
 

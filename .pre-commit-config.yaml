@@ -21,3 +21,17 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
       # Exécute le formateur ruff
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      # Hook local (pas le mirror officiel) pour réutiliser l'environnement déjà
+      # installé (torch, matplotlib) au lieu d'un venv isolé qui devrait tout
+      # réinstaller. Ne couvre que src/dstft (voir [tool.mypy] dans pyproject.toml) :
+      # les tests ne sont volontairement pas typés (cf. discussion précédente).
+      - id: mypy
+        name: mypy
+        entry: python -m mypy
+        language: system
+        types: [python]
+        files: ^src/dstft/
+        pass_filenames: false

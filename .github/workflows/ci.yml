@@ -45,4 +45,4 @@ jobs:
           pip install -e .[dev,docs]
 
       - name: Run tests
-        run: pytest
+        run: python -m pytest --cov=dstft --cov-report=term-missing
