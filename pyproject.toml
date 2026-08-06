@@ -30,12 +30,16 @@ dev = [
     "pre-commit>=3.0",
     "mypy>=1.10",
     "pytest-cov>=5.0",
+    "interrogate>=1.7",
 ]
 docs = [
     "sphinx>=7.0",
     "sphinx-copybutton>=0.5",
     "myst-parser>=2.0",
     "nbsphinx>=0.9",
+    # Registers the "ipython3" Pygments lexer nbsphinx uses to highlight
+    # notebook code cells; without it, syntax highlighting silently degrades.
+    "ipython>=8.0",
 ]
 
 [tool.setuptools]
@@ -99,3 +103,12 @@ files = ["src/dstft"]
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
+
+[tool.interrogate]
+# Baseline as of 2026-08-06 (66.7%): enforced as a floor so documentation
+# coverage cannot regress; raising it is a separate, deliberate follow-up.
+fail-under = 65
+paths = ["src/dstft"]
+ignore-init-module = true
+ignore-magic = true
+verbose = 1
