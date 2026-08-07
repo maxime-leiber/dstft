@@ -44,6 +44,43 @@ def test_inverse_dft_backend_methods(method: str) -> None:
     assert torch.isfinite(x_hat).all()
 
 
+# ---------------------------------------------------------------------------
+# Reconstruction accuracy with a non-integer hop_length
+# ---------------------------------------------------------------------------
+#
+# forward() and inverse() each independently recompute idx_frac and decide
+# whether the analysis/synthesis window needs to vary per frame (see
+# DSTFT._needs_per_frame_idx_frac). They must agree, or the window used to
+# synthesize the signal silently differs from the one used to analyze it,
+# breaking the FFT backend's otherwise-exact reconstruction. A non-integer
+# hop_length is what actually exercises this: idx_frac is nonzero and
+# genuinely varies across frames, unlike the integer hop_length used by
+# `_make_initialized`'s default, where every frame's idx_frac is trivially 0
+# regardless of whether the shared or per-frame path is taken.
+
+
+@pytest.mark.parametrize("window_mode", ["fixed", "constant"])
+@pytest.mark.parametrize("hop_mode", ["fixed", "constant", "time"])
+def test_inverse_is_near_exact_with_non_integer_hop_length(
+    window_mode: WindowMode, hop_mode: str
+) -> None:
+    torch.manual_seed(0)
+    x = torch.randn(1, 2048)
+    dstft = DSTFT(
+        n_fft=256,
+        win_length=128.0,
+        hop_length=31.7,
+        window_mode=window_mode,
+        hop_mode=hop_mode,  # type: ignore[arg-type]
+    )
+    dstft.initialize(x)
+    _, stft = dstft(x)
+    x_hat = dstft.inverse(stft)
+
+    assert torch.isfinite(x_hat).all()
+    assert (x - x_hat).abs().mean().item() < 1e-5
+
+
 def test_inverse_rejects_non_tensor() -> None:
     dstft, _, _ = _make_initialized("constant")
     with pytest.raises(TypeError, match="must be a torch.Tensor"):
