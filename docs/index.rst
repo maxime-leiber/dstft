@@ -38,3 +38,4 @@ DSTFT
    citation
    api
    notebooks
+   internals
