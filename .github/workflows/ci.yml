@@ -52,7 +52,8 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           files: ./coverage.xml
-          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
 
   docs:
     runs-on: ubuntu-latest

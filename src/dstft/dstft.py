@@ -215,6 +215,25 @@ class DSTFT(nn.Module):
         # - window length parameter(s): θ, θ_n, θ_m, θ_{m,n}
         # - hop / frame position parameter(s)
 
+    def _needs_per_frame_idx_frac(self) -> bool:
+        """Whether the analysis window needs one idx_frac per frame.
+
+        A scalar-theta window ("fixed"/"constant") only needs one shared
+        idx_frac (cheap: [1, 1, n_fft], identical for every frame) when
+        hop_length isn't learnable — with hop_mode="fixed", every frame's
+        window would be identical anyway, so there's nothing to gain from a
+        per-frame window. But when hop_mode != "fixed", the window's *shape*
+        is the only path by which hop_length can get a gradient (the phase
+        correction applied afterward is phase-only and never affects a
+        magnitude spectrogram), so a per-frame idx_frac ([1, frames, n_fft])
+        is required even though theta itself stays scalar.
+
+        `forward()` and `inverse()` must agree on this, since exact
+        reconstruction relies on using the same analysis/synthesis window in
+        both.
+        """
+        return self.window_mode not in {"fixed", "constant"} or self.hop_mode != "fixed"
+
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute the DSTFT.
 
@@ -252,8 +271,9 @@ class DSTFT(nn.Module):
         freq_bins = self.freq_bins
         theta = self._effective_win_length(device=x.device, dtype=x.dtype)
 
-        # When the window is fixed, avoid constructing a per-frame window.
-        idx_frac_for_window = idx_frac if self.window_mode != "fixed" else idx_frac[:1]
+        idx_frac_for_window = (
+            idx_frac if self._needs_per_frame_idx_frac() else idx_frac[:1]
+        )
         analysis_window = self._window_fn(
             n_fft=self.n_fft,
             theta=theta,
@@ -403,13 +423,20 @@ class DSTFT(nn.Module):
         frame_positions = self.frame_centers(device=stft.device, dtype=inv_dtype)
         theta = self._effective_win_length(device=stft.device, dtype=inv_dtype)
 
-        # Recompute idx_frac to generate the same analysis/synthesis window.
+        # Recompute idx_frac to generate the same analysis/synthesis window
+        # forward() used — must apply the identical per-frame-or-shared
+        # decision (_needs_per_frame_idx_frac) or the synthesis window here
+        # can silently diverge from the analysis window used in forward(),
+        # breaking exact reconstruction.
         idx_floor = frame_positions.floor().to(torch.int64)
         idx_frac = (frame_positions - idx_floor.to(frame_positions.dtype)).to(inv_dtype)
+        idx_frac_for_window = (
+            idx_frac if self._needs_per_frame_idx_frac() else idx_frac[:1]
+        )
         analysis_window = self._window_fn(
             n_fft=self.n_fft,
             theta=theta,
-            idx_frac=idx_frac,
+            idx_frac=idx_frac_for_window,
             freq_bins=self.freq_bins,
             frames=frame_positions.numel(),
             device=stft.device,
