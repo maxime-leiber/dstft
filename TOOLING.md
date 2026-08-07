@@ -47,9 +47,10 @@ vers une autre forge que GitHub.
 2. Connecte-toi avec ton compte GitHub, autorise l'app CodeRabbit.
 3. Sélectionne le repo `maxime-leiber/dstft` (ou "All repositories").
 4. Vérifie les permissions demandées (accès repo + PR) puis valide.
-5. Rien d'autre à configurer : chaque PR ouverte déclenche une review
-   automatique. Un fichier `.coderabbit.yaml` optionnel permet de
-   personnaliser le comportement.
+5. Rien d'autre à configurer : chaque PR éligible (ciblant la branche par
+   défaut, non-draft — voir la config CodeRabbit pour les filtres exacts)
+   déclenche une review automatique. Un fichier `.coderabbit.yaml`
+   optionnel permet de personnaliser le comportement.
 
 **Qodo Merge** (alternative) :
 1. Va sur le listing [Qodo Merge Pro for open
