@@ -1,9 +1,6 @@
 # dstft — project summary
 
-Generated documentation of the codebase, module by module. This mirrors what
-a RepoAgent run would produce (see `TOOLING.md` / `TODO.md` `[+repoagent-key]`
-for why this was written directly instead of via RepoAgent+Gemini for this
-pass), written by reading the actual source rather than only the docstrings.
+Documentation of the codebase, module by module.
 
 ## What this package does
 

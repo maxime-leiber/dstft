@@ -1,10 +1,5 @@
 # CodeRabbit vs Qodo Merge — recommendation for this repo
 
-Rédigé par l'agent de nuit (tâche 3, 2026-08-07). Sert à décider si l'on
-installe un reviewer automatique en plus de Claude Code, et lequel.
-Installation = action humaine (GitHub App), je ne peux pas le faire
-moi-même — voir `TODO.md` `[+review-bot]`.
-
 ## Contexte pour ce repo
 
 `dstft` est un **repo public**, mainteneur unique (Maxime), package
@@ -27,7 +22,8 @@ scientifique/numérique.
 
 ## Recommandation
 
-**CodeRabbit** est le choix le plus adapté pour ce repo précis :
+**CodeRabbit** est installé sur ce repo et reste le choix le plus adapté
+pour ce repo précis :
 
 - Le rate limit (4 reviews/heure) est largement suffisant pour un
   mainteneur solo qui ouvre quelques PR par jour au maximum — jamais
@@ -36,27 +32,27 @@ scientifique/numérique.
   avec `ruff`/`mypy` déjà en place, mais ajoutent une couche
   sémantique (résumé de PR, détection de régressions logiques) que
   `pre-commit`/CI ne fait pas.
-- Pas de gestion de clé API à faire soi-même (contrairement à
-  RepoAgent) : c'est une GitHub App, zéro secret à créer.
+- Pas de gestion de clé API à faire soi-même : c'est une GitHub App,
+  zéro secret à créer.
 
 Qodo Merge reste un choix raisonnable si un jour la génération
-automatique de tests devient prioritaire (`dstft` a une bonne
-couverture — 86% — donc ce n'est pas le cas aujourd'hui), ou si le
-repo migre un jour vers une autre forge que GitHub.
+automatique de tests devient prioritaire, ou si le repo migre un jour
+vers une autre forge que GitHub.
 
-## Ce que tu dois faire toi-même (je ne peux pas installer de GitHub App)
+## Installation
 
-**Pour CodeRabbit** :
+**CodeRabbit** :
 1. Va sur [coderabbit.ai](https://www.coderabbit.ai) → "Get Started
    Free".
 2. Connecte-toi avec ton compte GitHub, autorise l'app CodeRabbit.
 3. Sélectionne le repo `maxime-leiber/dstft` (ou "All repositories").
 4. Vérifie les permissions demandées (accès repo + PR) puis valide.
-5. Rien d'autre à configurer : la prochaine PR ouverte déclenche une
-   review automatique. Un fichier `.coderabbit.yaml` optionnel permet
-   de personnaliser le comportement plus tard si besoin.
+5. Rien d'autre à configurer : chaque PR éligible (ciblant la branche par
+   défaut, non-draft — voir la config CodeRabbit pour les filtres exacts)
+   déclenche une review automatique. Un fichier `.coderabbit.yaml`
+   optionnel permet de personnaliser le comportement.
 
-**Pour Qodo Merge** (si tu préfères cette option à la place) :
+**Qodo Merge** (alternative) :
 1. Va sur le listing [Qodo Merge Pro for open
    source](https://github.com/marketplace/qodo-merge-pro-for-open-source)
    sur le GitHub Marketplace.
@@ -64,9 +60,7 @@ repo migre un jour vers une autre forge que GitHub.
 3. Sélectionne `maxime-leiber/dstft` ("Only select repositories").
 4. Valide les permissions demandées.
 
-Les deux sont mutuellement exclusifs en pratique (pas besoin des
-deux) ; installe l'un des deux, ou aucun si tu préfères t'appuyer
-uniquement sur Claude Code + la CI existante pour l'instant.
+Les deux sont mutuellement exclusifs en pratique — pas besoin des deux.
 
 ## Sources
 
