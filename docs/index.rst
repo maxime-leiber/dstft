@@ -26,14 +26,19 @@ DSTFT
    :alt: License
 
 **dstft** implements a **Differentiable Short-Time Fourier Transform**: a
-PyTorch ``nn.Module`` (``DSTFT``) that computes a spectrogram the
-same way ``torch.stft`` would, except every parameter that normally has to be
-fixed up front — the analysis window's length, and the spacing between
-frames — can instead be a learnable tensor. Because the whole transform is
-implemented with differentiable PyTorch ops, gradients flow from a downstream
-loss (e.g. "make this spectrogram sparse") back into the window length or hop
-length, letting an optimizer discover a time-frequency tiling adapted to the
-signal instead of a hand-picked one.
+PyTorch ``nn.Module`` (``DSTFT``) that computes a spectrogram conceptually
+like ``torch.stft``, except every parameter that normally has to be fixed up
+front — the analysis window's length, and the spacing between frames — can
+instead be a learnable tensor. Because the whole transform is implemented
+with differentiable PyTorch ops, gradients flow from a downstream loss (e.g.
+"make this spectrogram sparse") back into the window length or hop length,
+letting an optimizer discover a time-frequency tiling adapted to the signal
+instead of a hand-picked one.
+
+Unlike ``torch.stft``, ``DSTFT`` is initialized once per signal length
+(``dstft.initialize(x)``) and returns both the magnitude spectrogram and the
+complex transform (``spec, stft = dstft(x)``) — see :doc:`getting_started`
+for a full example.
 
 .. image:: _static/opt.gif
    :alt: Optimization demo
