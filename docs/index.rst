@@ -38,7 +38,9 @@ instead of a hand-picked one.
 Unlike ``torch.stft``, ``DSTFT`` is initialized once per signal length
 (``dstft.initialize(x)``) and returns both the magnitude spectrogram and the
 complex transform (``spec, stft = dstft(x)``) — see :doc:`getting_started`
-for a full example.
+for a full example. Each instance is tied to the signal length it was first
+initialized with; reinitializing with a different length raises
+``RuntimeError`` (create a new instance instead).
 
 .. image:: _static/opt.gif
    :alt: Optimization demo
