@@ -214,3 +214,94 @@ def test_win_length_and_hop_length_properties_before_and_after_init() -> None:
 
     assert torch.isfinite(dstft.win_length).all()
     assert torch.isfinite(dstft.hop_length).all()
+
+
+# ---------------------------------------------------------------------------
+# hop_length gradient flow with a scalar (fixed/constant) window
+# ---------------------------------------------------------------------------
+#
+# With window_mode in {"fixed", "constant"}, the analysis window has a single
+# shared shape ([1, 1, n_fft]) reused across every frame for performance. The
+# window's *shape* only depends on hop_length through each frame's fractional
+# offset (idx_frac); the phase correction applied afterward is phase-only and
+# never affects a magnitude spectrogram. So if the shared window is built from
+# only one frame's idx_frac, hop_length gets no (or an incomplete) gradient
+# whenever a scalar window_mode is combined with a learnable hop_mode:
+#
+# - hop_mode="constant" (a single scalar hop, frame 0 always sits at position
+#   0*hop=0 regardless of hop's value): gradient is exactly zero.
+# - hop_mode="time" (one raw value per frame, frame_centers = hop.cumsum(0),
+#   so frame_positions[0] == hop[0] directly): gradient is nonzero but only
+#   for the first frame's own hop value, since only idx_frac[0] ever reaches
+#   the shared window — every other frame's hop entry gets exactly zero
+#   gradient despite being just as learnable.
+#
+# The fix should only pay the extra cost of a per-frame window when hop_mode
+# actually needs it (hop_mode != "fixed"); hop_mode="fixed" must stay on the
+# cheap shared path.
+
+
+@pytest.mark.parametrize("window_mode", ["fixed", "constant"])
+def test_hop_length_constant_gets_nonzero_gradient_with_scalar_window(
+    window_mode: WindowMode,
+) -> None:
+    torch.manual_seed(0)
+    x = torch.randn(1, 512)
+    dstft = DSTFT(
+        n_fft=128,
+        win_length=64.0,
+        hop_length=31.7,
+        window_mode=window_mode,
+        hop_mode="constant",
+    )
+    dstft.initialize(x)
+
+    spec, _ = dstft(x)
+    spec.sum().backward()
+
+    assert dstft._raw_hop_length.grad is not None
+    assert dstft._raw_hop_length.grad.norm().item() > 0.0
+
+
+@pytest.mark.parametrize("window_mode", ["fixed", "constant"])
+def test_hop_length_time_gets_gradient_from_every_frame_with_scalar_window(
+    window_mode: WindowMode,
+) -> None:
+    torch.manual_seed(0)
+    x = torch.randn(1, 512)
+    dstft = DSTFT(
+        n_fft=128,
+        win_length=64.0,
+        hop_length=31.7,
+        window_mode=window_mode,
+        hop_mode="time",
+    )
+    dstft.initialize(x)
+
+    spec, _ = dstft(x)
+    spec.sum().backward()
+
+    grad = dstft._raw_hop_length.grad
+    assert grad is not None
+    # Not just frame 0: today only grad[0] is nonzero, everything else is
+    # silently stuck at exactly zero.
+    assert torch.all(grad != 0.0)
+
+
+def test_fixed_hop_mode_keeps_the_shared_single_row_window() -> None:
+    """hop_mode="fixed" must not pay for a per-frame window: no learnable hop
+    means there's nothing for the extra per-frame cost to buy."""
+    torch.manual_seed(0)
+    x = torch.randn(1, 512)
+    dstft = DSTFT(
+        n_fft=128,
+        win_length=64.0,
+        hop_length=31.7,
+        window_mode="fixed",
+        hop_mode="fixed",
+    )
+    dstft.initialize(x)
+
+    dstft(x)
+
+    assert dstft.analysis_window.shape[1] == 1

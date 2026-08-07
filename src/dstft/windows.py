@@ -75,7 +75,13 @@ def hann_window(
     # window is centered at t_n and evaluated on a fixed discrete support.
     k_rel = torch.arange(n_fft, device=device, dtype=dtype) - (n_fft / 2)
     if theta_shape == "scalar":
-        x = k_rel[None, None, :] - idx_frac.to(dtype)[None, :1, None]  # [1, 1, n_fft]
+        # theta itself doesn't vary per frame, but idx_frac might: the caller
+        # decides whether a single shared idx_frac (cheap, [1, 1, n_fft]) or
+        # one per frame (needed for hop_length to get a gradient through the
+        # window's position, [1, frames, n_fft]) is passed in here.
+        x = (
+            k_rel[None, None, :] - idx_frac.to(dtype)[None, :, None]
+        )  # [1, idx_frac.numel(), n_fft]
     elif theta_shape == "time":
         x = (
             k_rel[None, None, :] - idx_frac.to(dtype)[None, :, None]
