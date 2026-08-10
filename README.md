@@ -94,6 +94,24 @@ dstft.initialize(x)
 spec, stft = dstft(x)
 ```
 
+Since `window_mode="constant"` makes `win_length` a learnable parameter, it
+can be optimized directly by gradient descent — no separate API, just a
+normal PyTorch training loop against any loss defined on `spec`/`stft`:
+
+```python
+optimizer = torch.optim.Adam(dstft.parameters(), lr=1.0)
+for _ in range(200):
+    optimizer.zero_grad()
+    spec, _ = dstft(x)
+    loss = spec.sum(dim=(1, 2)).mean()  # e.g. any loss defined on the spectrogram
+    loss.backward()
+    optimizer.step()
+
+print(dstft.win_length)  # moved away from its initial value of 256.0
+```
+
+See `notebooks/inverse.ipynb` for a full worked example, including
+reconstructing the signal back from the transform.
 
 ## License
 

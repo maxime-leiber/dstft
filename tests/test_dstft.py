@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 import torch
 
@@ -305,3 +307,149 @@ def test_fixed_hop_mode_keeps_the_shared_single_row_window() -> None:
     dstft(x)
 
     assert dstft.analysis_window.shape[1] == 1
+
+
+# ---------------------------------------------------------------------------
+# Gradient correctness (torch.autograd.gradcheck)
+# ---------------------------------------------------------------------------
+#
+# gradcheck compares the analytical backward pass against a numerical
+# finite-difference estimate, so it needs float64 and a function whose only
+# input is the tensor under test. DSTFT stores its learnable parameters as
+# registered nn.Parameters, so the checked tensor has to be swapped in via
+# object.__setattr__ (bypassing nn.Module's own parameter bookkeeping)
+# rather than re-wrapped in a fresh nn.Parameter, which would silently
+# detach it from the graph gradcheck is perturbing.
+
+
+def _gradcheck_raw_param(dstft: DSTFT, attr: str, x: torch.Tensor) -> bool:
+    raw = getattr(dstft, attr).clone().detach().requires_grad_(True)
+
+    def func(raw_param: torch.Tensor) -> torch.Tensor:
+        object.__setattr__(dstft, attr, raw_param)
+        spec, _ = dstft(x)
+        return spec
+
+    return torch.autograd.gradcheck(func, (raw,), eps=1e-6, atol=1e-4)
+
+
+def test_gradcheck_win_length_fft_backend() -> None:
+    torch.manual_seed(0)
+    x = torch.randn(1, 128, dtype=torch.float64)
+    dstft = DSTFT(
+        n_fft=32,
+        win_length=24.0,
+        hop_length=8.0,
+        window_mode="constant",
+        hop_mode="fixed",
+    )
+    dstft.initialize(x)
+    dstft.double()
+
+    assert _gradcheck_raw_param(dstft, "_raw_win_length", x)
+
+
+def test_gradcheck_hop_length_fft_backend() -> None:
+    torch.manual_seed(0)
+    x = torch.randn(1, 128, dtype=torch.float64)
+    dstft = DSTFT(
+        n_fft=32, win_length=24.0, hop_length=8.0, window_mode="time", hop_mode="time"
+    )
+    dstft.initialize(x)
+    dstft.double()
+
+    assert _gradcheck_raw_param(dstft, "_raw_hop_length", x)
+
+
+def test_gradcheck_win_length_dft_backend() -> None:
+    torch.manual_seed(0)
+    x = torch.randn(1, 130, dtype=torch.float64)
+    dstft = DSTFT(
+        n_fft=16,
+        win_length=12.0,
+        hop_length=7.0,
+        window_mode="time-frequency",
+        hop_mode="fixed",
+    )
+    dstft.initialize(x)
+    dstft.double()
+
+    assert _gradcheck_raw_param(dstft, "_raw_win_length", x)
+
+
+# ---------------------------------------------------------------------------
+# Numerical parity with torch.stft
+# ---------------------------------------------------------------------------
+#
+# DSTFT's frame-centering convention (frames centered at t_n, with implicit
+# zero-padding for out-of-range samples) differs from torch.stft's frame
+# layout (frames start at n * hop_length, center=False means no padding at
+# all), so the two aren't directly comparable frame-by-frame across a whole
+# signal. To sidestep that, each check isolates a single interior DSTFT
+# frame, floors its own reported center exactly the way DSTFT's forward
+# pass does (idx_floor = floor(t_n), not round(t_n) - these differ whenever
+# hop_length's sigmoid reparameterization lands a hair below an integer),
+# and asks torch.stft to transform only that n_fft-sample segment.
+# Magnitude only, since phase convention (centered vs frame-start-relative)
+# is a deliberate design choice, not something torch.stft shares.
+
+
+@pytest.mark.parametrize("frame_index", [3, 5, 10])
+def test_matches_torch_stft_magnitude_per_frame(frame_index: int) -> None:
+    torch.manual_seed(0)
+    x = torch.randn(1, 512, dtype=torch.float64)
+    n_fft, hop_length, win_length = 64, 16, 64
+
+    dstft = DSTFT(
+        n_fft=n_fft,
+        win_length=float(win_length),
+        hop_length=float(hop_length),
+        window_mode="fixed",
+        hop_mode="fixed",
+    )
+    dstft.initialize(x)
+    dstft.double()
+    _, stft = dstft(x)
+    centers = dstft.frame_centers()
+
+    t_n = math.floor(centers[frame_index].item())
+    start = t_n - n_fft // 2
+    segment = x[:, start : start + n_fft]
+
+    window = torch.hann_window(win_length, periodic=True, dtype=torch.float64)
+    ref = torch.stft(
+        segment,
+        n_fft=n_fft,
+        hop_length=n_fft,
+        win_length=win_length,
+        window=window,
+        center=False,
+        return_complex=True,
+    )
+
+    torch.testing.assert_close(
+        stft[0, :, frame_index].abs(), ref[0, :, 0].abs(), atol=1e-3, rtol=1e-3
+    )
+
+
+# ---------------------------------------------------------------------------
+# Device coverage
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires a CUDA device")
+def test_forward_and_backward_on_cuda() -> None:
+    torch.manual_seed(0)
+    device = torch.device("cuda")
+    x = torch.randn(1, 256, device=device)
+    dstft = DSTFT(
+        n_fft=64, win_length=48.0, hop_length=16.0, window_mode="time", hop_mode="time"
+    )
+    dstft.initialize(x)
+
+    spec, _ = dstft(x)
+    assert spec.device.type == "cuda"
+
+    spec.sum().backward()
+    assert dstft._raw_win_length.grad is not None
+    assert dstft._raw_win_length.grad.device.type == "cuda"
