@@ -110,9 +110,8 @@ for _ in range(200):
 print(dstft.win_length)  # moved away from its initial value of 256.0
 ```
 
-See `notebooks/window_optimization.ipynb` and `notebooks/hop_optimization.ipynb`
-for a full walkthrough of what each learnable parameter controls and how to
-read the results.
+See `notebooks/inverse.ipynb` for a full worked example, including
+reconstructing the signal back from the transform.
 
 ## License
 
