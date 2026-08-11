@@ -546,7 +546,11 @@ class DSTFT(nn.Module):
             eps=self.eps,
         )
 
-    def _inverse_dft_exact(self, stft: torch.Tensor) -> torch.Tensor:
+    def _inverse_dft_exact(
+        self, stft: torch.Tensor
+    ) -> torch.Tensor:  # pragma: no cover
+        # Not wired into inverse()'s method dispatch yet (kept as scaffolding
+        # for a future exact DFT-backend inverse); unreachable until then.
         raise NotImplementedError(
             "DFT-backend inverse is temporarily disabled while the adjoint/Gram "
             "operator is being validated."
