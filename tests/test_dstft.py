@@ -159,6 +159,18 @@ def test_forward_before_initialize_raises() -> None:
 # ---------------------------------------------------------------------------
 
 
+def test_initialize_rejects_non_tensor_input() -> None:
+    dstft = DSTFT(n_fft=64)
+    with pytest.raises(TypeError, match=r"must be a torch\.Tensor"):
+        dstft.initialize([1.0, 2.0])  # type: ignore[arg-type]
+
+
+def test_initialize_rejects_wrong_ndim() -> None:
+    dstft = DSTFT(n_fft=64)
+    with pytest.raises(ValueError, match=r"shape \[batch, time\]"):
+        dstft.initialize(torch.randn(256))
+
+
 def test_initialize_rejects_signal_shorter_than_n_fft() -> None:
     dstft = DSTFT(n_fft=256)
     with pytest.raises(ValueError, match="must be >= n_fft"):
