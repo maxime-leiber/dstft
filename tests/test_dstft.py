@@ -161,7 +161,7 @@ def test_forward_before_initialize_raises() -> None:
 
 def test_initialize_rejects_non_tensor_input() -> None:
     dstft = DSTFT(n_fft=64)
-    with pytest.raises(TypeError, match="must be a torch.Tensor"):
+    with pytest.raises(TypeError, match=r"must be a torch\.Tensor"):
         dstft.initialize([1.0, 2.0])  # type: ignore[arg-type]
 
 

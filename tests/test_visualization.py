@@ -27,13 +27,18 @@ def test_plot_spec_reuses_provided_axis() -> None:
     assert returned_ax is ax
 
 
-def test_plot_spec_calls_show() -> None:
+def test_plot_spec_calls_show(monkeypatch: pytest.MonkeyPatch) -> None:
     # matplotlib is forced to the non-interactive "Agg" backend in
     # conftest.py, so plt.show() is a no-op here rather than blocking.
+    calls = []
+    monkeypatch.setattr(
+        "dstft.visualization.plt.show", lambda *a, **k: calls.append((a, k))
+    )
     spec = torch.rand(1, 8, 10)
     fig, ax = plot_spec(spec, show=True)
     assert fig is not None
     assert ax is not None
+    assert len(calls) == 1
 
 
 @pytest.mark.parametrize(
@@ -63,12 +68,18 @@ def test_plot_win_lengths_reuses_provided_axis_and_title() -> None:
     fig, returned_ax = plot_win_lengths(256.0, ax=ax, title="t", show=False)
     assert returned_ax is ax
     assert fig is ax.figure
+    assert returned_ax.get_title() == "t"
 
 
-def test_plot_win_lengths_calls_show() -> None:
+def test_plot_win_lengths_calls_show(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+    monkeypatch.setattr(
+        "dstft.visualization.plt.show", lambda *a, **k: calls.append((a, k))
+    )
     fig, ax = plot_win_lengths(256.0, show=True)
     assert fig is not None
     assert ax is not None
+    assert len(calls) == 1
 
 
 def test_dstft_plot_wrappers() -> None:
