@@ -110,9 +110,8 @@ def test_overlap_add_dual_rejects_window_n_fft_mismatch() -> None:
 
 def test_overlap_add_dual_rejects_window_frame_count_mismatch() -> None:
     # Leading dim must be 1 (broadcast) or match num_frames; 2 is neither
-    # (with num_frames=3). Note: a leading dim of exactly 1 combined with a
-    # mismatched *second* dim instead raises a RuntimeError from the
-    # underlying `.expand()` call, not this ValueError - see PR description.
+    # (with num_frames=3). See PR description for a related edge case this
+    # ValueError doesn't cover.
     with pytest.raises(ValueError, match="frames dimension must be 1 or match frames"):
         _core.overlap_add_dual(
             frames=_frames(frames=3),
