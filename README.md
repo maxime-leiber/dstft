@@ -28,7 +28,37 @@ Gradient-based optimization of DSTFT parameters (example: window length).
 
 ## Installation
 
-### pip/venv
+### From PyPI
+
+For general use, install the published package:
+
+```bash
+pip install dstft
+```
+
+Or with [`uv`](https://github.com/astral-sh/uv):
+
+```bash
+uv venv
+source .venv/bin/activate
+uv pip install dstft
+```
+
+Or in a Conda/Mamba environment (there is no separate conda-forge package;
+`pip install` works the same once the environment is activated):
+
+```bash
+mamba create -n dstft python=3.11 pip
+mamba activate dstft
+pip install dstft
+```
+
+### For development (editable install)
+
+To contribute to `dstft` itself, clone the repository and install in
+editable mode instead — see [Contributing](#contributing) below.
+
+#### pip/venv
 
 Create and activate a virtual environment, then install in editable mode:
 
@@ -39,7 +69,7 @@ pip install -U pip
 pip install -e .
 ```
 
-### Conda/Mamba + uv
+#### Conda/Mamba + uv
 
 Create a new environment:
 
