@@ -39,6 +39,8 @@ pip install dstft
 Or with [`uv`](https://github.com/astral-sh/uv):
 
 ```bash
+uv venv
+source .venv/bin/activate
 uv pip install dstft
 ```
 

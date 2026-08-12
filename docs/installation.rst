@@ -14,6 +14,8 @@ Or with `uv <https://github.com/astral-sh/uv>`_:
 
 .. code-block:: bash
 
+   uv venv
+   source .venv/bin/activate
    uv pip install dstft
 
 Or in a Conda/Mamba environment (there is no separate conda-forge package;
