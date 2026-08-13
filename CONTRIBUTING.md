@@ -34,7 +34,8 @@ pip install -e ".[docs]"
 python -m pytest --cov=dstft --cov-report=term-missing
 ```
 
-CI runs this against Python 3.10, 3.11, and 3.12 — see
+CI runs the same command (plus `--cov-report=xml`, only needed to upload
+coverage to Codecov) against Python 3.10, 3.11, and 3.12 — see
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Pre-commit checks
@@ -67,8 +68,9 @@ obvious from the diff or from the code itself.
 
 1. Fork the repository and create a branch for your change.
 2. Make your change, with tests covering new behavior and/or bug fixes.
-3. Run `pytest` and `pre-commit run --all-files` locally; both must pass
-   (CI enforces the same checks).
+3. Run `python -m pytest --cov=dstft --cov-report=term-missing` and
+   `pre-commit run --all-files` locally; both must pass (CI runs the
+   equivalent test and pre-commit-hooks checks).
 4. Open a pull request against `main` describing what changed and why —
    see recently merged PRs for the expected level of detail.
 
@@ -79,6 +81,7 @@ and, where relevant, include a comparison against the previous behavior
 
 ## Reporting bugs or requesting features
 
-Please [open an issue](https://github.com/maxime-leiber/dstft/issues) using
-the issue templates, which list the information that's most useful to
-include.
+Please [open an issue](https://github.com/maxime-leiber/dstft/issues). For a
+bug report, include a minimal reproduction and the expected vs. observed
+behavior; for a feature request, describe the problem it would solve. Also
+include your `dstft`, PyTorch, and Python versions for bug reports.
