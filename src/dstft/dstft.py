@@ -10,12 +10,20 @@ Design principles:
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Literal, Protocol, TypeAlias
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeAlias
 
 import torch
 from torch import nn
 
 from . import _core, windows
+
+
+if TYPE_CHECKING:
+    # Matplotlib is only imported lazily at call time (see plot_spec /
+    # plot_win_lengths below) to keep it an optional dependency; this
+    # import is type-checking-only and has no runtime effect.
+    import matplotlib.axes
+    import matplotlib.figure
 
 
 Normalization: TypeAlias = None | Literal["unit", "paper", "contract"]
@@ -732,7 +740,9 @@ class DSTFT(nn.Module):
         hop_max = torch.tensor(float(self.hop_length_max), device=device, dtype=dtype)
         return hop_min + (hop_max - hop_min) * torch.sigmoid(raw)
 
-    def plot_spec(self, spec: torch.Tensor, **kwargs):
+    def plot_spec(
+        self, spec: torch.Tensor, **kwargs: Any
+    ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         """Convenience wrapper around `dstft.visualization.plot_spec`.
 
         Args:
@@ -746,7 +756,9 @@ class DSTFT(nn.Module):
 
         return plot_spec(spec, **kwargs)
 
-    def plot_win_lengths(self, **kwargs):
+    def plot_win_lengths(
+        self, **kwargs: Any
+    ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         """Convenience wrapper around `dstft.visualization.plot_win_lengths`.
 
         This uses the module's current window-length parameterization.

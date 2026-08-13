@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from math import pi
+from typing import cast
 
 import torch
 
@@ -315,7 +316,9 @@ def fdstft_fft_forward(
     m = _get_rfft_m(freq_bins=freq_bins, device=frames.device, dtype=frames.dtype)
     phase = torch.exp((-2j * pi / float(n_fft)) * (idx_floor[:, None] * m[None, :]))
     spectr = spectr * phase[None, :, :]
-    return spectr.permute(0, 2, 1)
+    # permute()'s stub loses precision through the preceding complex-dtype
+    # ops and returns Any; it's a Tensor at runtime regardless.
+    return cast(torch.Tensor, spectr.permute(0, 2, 1))
 
 
 def adstft_dft_forward(
