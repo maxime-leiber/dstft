@@ -122,6 +122,15 @@ class DSTFT(nn.Module):
 
         self.n_fft = int(n_fft)
         self.freq_bins = self.n_fft // 2 + 1
+        if window_mode not in (
+            "fixed",
+            "constant",
+            "time",
+            "frequency",
+            "time-frequency",
+        ):
+            raise ValueError(f"Unknown window_mode: {window_mode!r}")
+
         self.window = window
         self.window_mode = window_mode
         self.hop_mode = hop_mode
@@ -205,7 +214,7 @@ class DSTFT(nn.Module):
         # For now, only FFT is implemented. Later, DFT is selected when
         # window_mode implies frequency dependence.
         self._transform_fn: Callable[..., torch.Tensor]
-        if window_mode in {"frequency", "time-frequency"}:
+        if window_mode in ("frequency", "time-frequency"):
             # DFT backend required for frequency-dependent windows.
             self._transform_fn = _core.adstft_dft_forward
         else:
@@ -232,7 +241,7 @@ class DSTFT(nn.Module):
         reconstruction relies on using the same analysis/synthesis window in
         both.
         """
-        return self.window_mode not in {"fixed", "constant"} or self.hop_mode != "fixed"
+        return self.window_mode not in ("fixed", "constant") or self.hop_mode != "fixed"
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute the DSTFT.
@@ -285,7 +294,7 @@ class DSTFT(nn.Module):
             normalization=self.normalization,
         )
 
-        if self.window_mode in {"fixed", "constant", "time"}:
+        if self.window_mode in ("fixed", "constant", "time"):
             # FFT backend accepts either [frames, n_fft] or broadcastable [1, frames, n_fft].
             if analysis_window.ndim == 3:
                 if analysis_window.shape[0] != 1:
@@ -298,7 +307,7 @@ class DSTFT(nn.Module):
                 )
 
         if (
-            self.window_mode in {"frequency", "time-frequency"}
+            self.window_mode in ("frequency", "time-frequency")
             and analysis_window.ndim != 3
         ):
             raise RuntimeError(
@@ -406,10 +415,10 @@ class DSTFT(nn.Module):
         if method == "auto":
             method = (
                 "wola"
-                if self.window_mode not in {"frequency", "time-frequency"}
+                if self.window_mode not in ("frequency", "time-frequency")
                 else "cg"
             )
-        if method not in {"wola", "cg"}:
+        if method not in ("wola", "cg"):
             raise ValueError(f"Unknown inverse method: {method!r}")
 
         expected_freq = self.freq_bins
@@ -444,7 +453,7 @@ class DSTFT(nn.Module):
             normalization=self.normalization,
         )
 
-        if self.window_mode in {"frequency", "time-frequency"}:
+        if self.window_mode in ("frequency", "time-frequency"):
             # DFT backend: use adjoint + diagonal (WOLA) normalization.
             if analysis_window.ndim != 3:
                 raise RuntimeError(
@@ -680,14 +689,14 @@ class DSTFT(nn.Module):
             raise RuntimeError("DSTFT must be initialized to validate shapes")
 
         freq_dim, time_dim = self._raw_win_length.shape
-        if freq_dim not in {1, self.freq_bins}:
+        if freq_dim not in (1, self.freq_bins):
             raise RuntimeError("win_length first dimension must be 1 or freq_bins")
-        if time_dim not in {1, self._num_frames}:
+        if time_dim not in (1, self._num_frames):
             raise RuntimeError("win_length second dimension must be 1 or frames")
 
         if self._raw_hop_length.ndim != 1:
             raise RuntimeError("hop_length must be 1D")
-        if self._raw_hop_length.shape[0] not in {1, self._num_frames}:
+        if self._raw_hop_length.shape[0] not in (1, self._num_frames):
             raise RuntimeError("hop_length length must be 1 or frames")
 
     @property
@@ -860,7 +869,7 @@ class DSTFT(nn.Module):
                 requires_grad=True,
             )
 
-        if self.window_mode in {"fixed", "constant"}:
+        if self.window_mode in ("fixed", "constant"):
             self._raw_win_length = nn.Parameter(
                 self._raw_win_length.detach().to(device=x.device, dtype=x.dtype),
                 requires_grad=(self.window_mode != "fixed"),

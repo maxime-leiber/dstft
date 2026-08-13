@@ -67,6 +67,12 @@ def test_dstft_rejects_invalid_window_type() -> None:
         DSTFT(n_fft=64, window=123)  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize("window_mode", ["bogus", [], 123, None])
+def test_dstft_rejects_invalid_window_mode(window_mode: object) -> None:
+    with pytest.raises(ValueError, match="Unknown window_mode"):
+        DSTFT(n_fft=64, window_mode=window_mode)  # type: ignore[arg-type]
+
+
 def test_dstft_accepts_custom_window_callable() -> None:
     def rectangular_window(
         *,
