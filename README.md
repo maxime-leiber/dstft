@@ -145,20 +145,28 @@ reconstructing the signal back from the transform.
 
 ## PyTorch compatibility
 
-- **`torch.compile`**: works out of the box (tested on PyTorch 2.13),
-  including `fullgraph=True` and a full forward/backward/optimizer step
-  (e.g. optimizing `hop_length`/`win_length`). Output matches eager exactly.
-  Compiling `forward` triggers one graph break from a `.item()` call used
-  internally to turn a computed frame count into a Python int
-  (`torch._dynamo.config.capture_scalar_outputs` avoids it, but it isn't
-  required for correctness or for `fullgraph=True` to succeed).
+- **`torch.compile`**: the default backend works (tested on PyTorch
+  2.13), including a full forward/backward/optimizer step (e.g.
+  optimizing `hop_length`/`win_length`) — output matches eager exactly.
+  It hits one graph break from a `.item()` call used internally
+  (`compute_frame_positions_fixed_hop` in `_core.py`) to turn a
+  computed frame count into a Python int; dynamo falls back to eager for
+  that piece and continues, which is why the result still matches eager.
+  **`fullgraph=True` does not work**: with `fullgraph=True`, dynamo
+  cannot fall back at that same `.item()` call and instead tries to
+  reason about the frame count symbolically, which fails with
+  `torch._dynamo.exc.BackendCompilerFailed:
+  GuardOnDataDependentSymNode` further downstream. Avoiding this would
+  need reworking how frame counts flow through the FFT backend to avoid
+  data-dependent shapes under full-graph capture — a real engineering
+  effort, not a small fix, so it's documented here rather than forced.
 - **`torch.jit.script`**: not currently supported. `DSTFT.frame_centers`
   uses a keyword-only argument with a default (`*, device=None,
   dtype=None`), which TorchScript's compiler rejects
   (`torch.jit.frontend.NotSupportedError`). Changing that signature would
   be a public-API change, so it hasn't been done as a side effect of this
-  investigation. `torch.compile` is the supported path for graph
-  compilation.
+  investigation. `torch.compile` (without `fullgraph=True`) is the
+  supported path for graph compilation.
 
 ## License
 

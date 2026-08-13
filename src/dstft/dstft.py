@@ -122,6 +122,15 @@ class DSTFT(nn.Module):
 
         self.n_fft = int(n_fft)
         self.freq_bins = self.n_fft // 2 + 1
+        if window_mode not in (
+            "fixed",
+            "constant",
+            "time",
+            "frequency",
+            "time-frequency",
+        ):
+            raise ValueError(f"Unknown window_mode: {window_mode!r}")
+
         self.window = window
         self.window_mode = window_mode
         self.hop_mode = hop_mode
