@@ -16,7 +16,7 @@ with `dstft`, or what's awkward/inefficient about the current API?
 What you'd like to see added or changed. If this touches `src/dstft/`'s
 numerical behavior (a new formula, a new mode, a change to an existing
 default), please say so explicitly — those changes get extra scrutiny, see
-[CONTRIBUTING.md](../../CONTRIBUTING.md).
+[CONTRIBUTING.md](https://github.com/maxime-leiber/dstft/blob/main/CONTRIBUTING.md).
 
 ## Alternatives considered
 
