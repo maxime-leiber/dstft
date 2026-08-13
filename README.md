@@ -161,7 +161,7 @@ reconstructing the signal back from the transform.
   data-dependent shapes under full-graph capture — a real engineering
   effort, not a small fix, so it's documented here rather than forced.
 - **`torch.jit.script`**: not currently supported. `DSTFT.frame_centers`
-  uses a keyword-only argument with a default (`*, device=None,
+  uses keyword-only arguments with defaults (`*, device=None,
   dtype=None`), which TorchScript's compiler rejects
   (`torch.jit.frontend.NotSupportedError`). Changing that signature would
   be a public-API change, so it hasn't been done as a side effect of this
