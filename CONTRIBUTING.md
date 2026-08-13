@@ -2,7 +2,8 @@
 
 Thanks for your interest in contributing! This document covers how to set up
 a development environment, run the test suite and pre-commit checks, and
-submit a pull request.
+submit a pull request. Everyone participating is expected to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Development setup
 
