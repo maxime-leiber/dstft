@@ -143,6 +143,23 @@ print(dstft.win_length)  # moved away from its initial value of 256.0
 See `notebooks/inverse.ipynb` for a full worked example, including
 reconstructing the signal back from the transform.
 
+## PyTorch compatibility
+
+- **`torch.compile`**: works out of the box (tested on PyTorch 2.13),
+  including `fullgraph=True` and a full forward/backward/optimizer step
+  (e.g. optimizing `hop_length`/`win_length`). Output matches eager exactly.
+  Compiling `forward` triggers one graph break from a `.item()` call used
+  internally to turn a computed frame count into a Python int
+  (`torch._dynamo.config.capture_scalar_outputs` avoids it, but it isn't
+  required for correctness or for `fullgraph=True` to succeed).
+- **`torch.jit.script`**: not currently supported. `DSTFT.frame_centers`
+  uses a keyword-only argument with a default (`*, device=None,
+  dtype=None`), which TorchScript's compiler rejects
+  (`torch.jit.frontend.NotSupportedError`). Changing that signature would
+  be a public-API change, so it hasn't been done as a side effect of this
+  investigation. `torch.compile` is the supported path for graph
+  compilation.
+
 ## License
 
 This project is licensed under the terms of the MIT License. See the
