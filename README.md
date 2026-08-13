@@ -151,7 +151,8 @@ This project is licensed under the terms of the MIT License. See the
 ## Contributing
 
 Contributions are welcome! Please open issues or pull requests for bug fixes,
-improvements, or new features.
+improvements, or new features. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+development setup, test/pre-commit commands, and PR guidelines.
 
 ## Releasing
 
