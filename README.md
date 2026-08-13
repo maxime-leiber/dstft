@@ -152,7 +152,9 @@ This project is licensed under the terms of the MIT License. See the
 
 Contributions are welcome! Please open issues or pull requests for bug fixes,
 improvements, or new features. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
-development setup, test/pre-commit commands, and PR guidelines.
+development setup, test/pre-commit commands, and PR guidelines. Everyone
+participating is expected to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Releasing
 
