@@ -146,24 +146,30 @@ reconstructing the signal back from the transform.
 ## Benchmark: DSTFT vs. `torch.stft`
 
 `DSTFT` trades speed and memory for learnable parameters. For a sense of the
-overhead, `scripts/benchmark_vs_torch_stft.py` compares `DSTFT` in its
-cheapest, non-learnable configuration (`window_mode="fixed"`,
-`hop_mode="fixed"`) against `torch.stft` with equivalent parameters
-(`n_fft=1024`, `hop_length=256`, Hann window, batch size 8). Measured on CPU
-(PyTorch 2.13); numbers vary by machine and are meant to convey order of
-magnitude, not precise guarantees.
+overhead, `scripts/benchmark_vs_torch_stft.py` compares `DSTFT`'s complete
+`forward()` API, in its cheapest non-learnable configuration
+(`window_mode="fixed"`, `hop_mode="fixed"`), against raw `torch.stft` with
+equivalent parameters (`n_fft=1024`, `hop_length=256`, Hann window, batch
+size 8). This isn't an equal-amount-of-work comparison: `DSTFT.forward()`
+always computes and returns both the magnitude spectrogram and the complex
+transform, while `torch.stft` only computes the latter, so part of the gap
+below is genuinely more output, not pure overhead. Measured on CPU (PyTorch
+2.13); numbers vary by machine and are meant to convey order of magnitude,
+not precise guarantees.
 
-| Signal length | `torch.stft` | `DSTFT` forward | `DSTFT` forward+backward |
+| Signal length | `torch.stft` (raw) | `DSTFT` `forward()` | `DSTFT` forward+backward |
 | --- | ---: | ---: | ---: |
 | 1s @16kHz | 2.2 ms | 9.1 ms | 14.1 ms |
 | 5s @16kHz | 9.0 ms | 37.4 ms | 63.9 ms |
 | 30s @16kHz | 43.3 ms | 380.3 ms | 779.7 ms |
 
 (one representative run; see the script's docstring for exact parameters).
-`DSTFT`'s forward pass is roughly 4-9x slower than `torch.stft` and uses
-about 3x the memory (measured via `torch.profiler`, sum of per-op CPU
-allocations for a 5s signal: ~45 MB for `torch.stft` vs. ~135 MB for
-`DSTFT`). This is the cost of the extra machinery needed for a
+`DSTFT`'s forward pass is roughly 4-9x slower than raw `torch.stft` and
+shows about 3x the cumulative positive per-op CPU allocations reported by
+`torch.profiler` for a 5s signal (~45 MB for `torch.stft` vs. ~135 MB for
+`DSTFT` — this is allocator-pressure activity, not a peak-live-memory
+figure; `torch.profiler` doesn't expose a single peak-memory number). This
+reflects both the extra output and the machinery needed for a
 window/hop-length-independent, differentiable formulation — `torch.stft` is
 a single fused, highly optimized native op with no such flexibility. Run
 the script yourself (`python scripts/benchmark_vs_torch_stft.py`) to

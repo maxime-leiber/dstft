@@ -1,11 +1,20 @@
 """Micro-benchmark: DSTFT vs. torch.stft, CPU, forward speed and memory.
 
-Compares DSTFT (window_mode="fixed", hop_mode="fixed" — its cheapest,
-non-learnable configuration, closest to what torch.stft computes) against
-torch.stft with equivalent parameters (same n_fft, hop_length, Hann window).
-Also times a DSTFT forward+backward pass (window_mode="constant", learnable
-win_length) as a reference for the actual training-loop cost, since that's
-what torch.stft cannot do at all.
+Compares DSTFT's complete forward() API (window_mode="fixed",
+hop_mode="fixed" — its cheapest, non-learnable configuration) against raw
+torch.stft with equivalent parameters (same n_fft, hop_length, Hann
+window). This is not an apples-to-apples "same amount of work" comparison:
+DSTFT.forward() always computes and returns both the magnitude spectrogram
+and the complex transform, while torch.stft only computes the latter, so
+part of the gap reflects genuinely more output being produced, not pure
+overhead. Also times a DSTFT forward+backward pass (window_mode="constant",
+learnable win_length) as a reference for the actual training-loop cost,
+since that's what torch.stft cannot do at all.
+
+The memory figures report cumulative positive per-op CPU allocation
+activity from torch.profiler (profile_memory=True), summed across
+key_averages() — this is a proxy for allocator pressure, not peak live
+memory: PyTorch's profiler does not expose a single peak-memory figure.
 
 Run with: python scripts/benchmark_vs_torch_stft.py
 """
@@ -104,7 +113,9 @@ def run_memory() -> None:
 
     print()
     print(
-        "Forward-pass CPU memory (sum of positive per-op allocations, torch.profiler):"
+        "Forward-pass cumulative positive per-op CPU allocations, torch.profiler "
+        "(allocator-pressure proxy, NOT peak live memory — torch.profiler doesn't "
+        "expose a single peak-memory figure):"
     )
     for name, fn in [
         ("torch.stft", lambda: torch_stft_forward(x, hann)),
@@ -115,7 +126,7 @@ def run_memory() -> None:
             profile(activities=[ProfilerActivity.CPU], profile_memory=True) as prof,
         ):
             fn()
-        total_kib = (
+        cumulative_alloc_kib = (
             sum(
                 evt.cpu_memory_usage
                 for evt in prof.key_averages()
@@ -123,7 +134,7 @@ def run_memory() -> None:
             )
             / 1024
         )
-        print(f"  {name:22s} {total_kib:10.1f} KiB")
+        print(f"  {name:22s} {cumulative_alloc_kib:10.1f} KiB")
 
 
 if __name__ == "__main__":
