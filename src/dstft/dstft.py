@@ -19,9 +19,10 @@ from . import _core, windows
 
 
 if TYPE_CHECKING:
-    # Matplotlib is only imported lazily at call time (see plot_spec /
-    # plot_win_lengths below) to keep it an optional dependency; this
-    # import is type-checking-only and has no runtime effect.
+    # matplotlib is a required dependency (pyproject.toml), but this module
+    # only imports it lazily at call time (see plot_spec / plot_win_lengths
+    # below) to avoid the import cost when a DSTFT instance never plots.
+    # This particular import is type-checking-only and has no runtime effect.
     import matplotlib.axes
     import matplotlib.figure
 
