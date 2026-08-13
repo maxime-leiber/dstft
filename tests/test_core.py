@@ -108,15 +108,27 @@ def test_overlap_add_dual_rejects_window_n_fft_mismatch() -> None:
         )
 
 
+def test_overlap_add_dual_rejects_invalid_leading_dim() -> None:
+    with pytest.raises(ValueError, match="leading dimension must be 1"):
+        _core.overlap_add_dual(
+            frames=_frames(frames=3),
+            frame_positions=_positions(frames=3),
+            analysis_window=torch.ones(2, 3, 8),  # leading dim 2 != 1
+            signal_length=16,
+            eps=1e-8,
+        )
+
+
 def test_overlap_add_dual_rejects_window_frame_count_mismatch() -> None:
-    # Leading dim must be 1 (broadcast) or match num_frames; 2 is neither
-    # (with num_frames=3). See PR description for a related edge case this
-    # ValueError doesn't cover.
+    # Regression test: shape[0]==1 (valid leading dim) but shape[1] (the
+    # actual frames axis) is neither 1 nor num_frames used to fall through
+    # to `.expand()` and raise RuntimeError instead of this ValueError
+    # (see TODO.md [+coverage-95] / PR #26's description).
     with pytest.raises(ValueError, match="frames dimension must be 1 or match frames"):
         _core.overlap_add_dual(
             frames=_frames(frames=3),
             frame_positions=_positions(frames=3),
-            analysis_window=torch.ones(2, 3, 8),  # leading dim 2 != 1 and != 3
+            analysis_window=torch.ones(1, 2, 8),  # frames dim 2 != 1 and != 3
             signal_length=16,
             eps=1e-8,
         )

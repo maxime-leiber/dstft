@@ -163,9 +163,11 @@ def overlap_add_dual(
         raise ValueError("analysis_window last dimension must match n_fft")
 
     win = win.to(device=frames.device, dtype=frames.dtype)
-    if win.shape[0] == 1:
+    if win.shape[0] != 1:
+        raise ValueError("analysis_window leading dimension must be 1")
+    if win.shape[1] == 1:
         win = win.expand(1, num_frames, n_fft)
-    elif win.shape[0] != num_frames:
+    elif win.shape[1] != num_frames:
         raise ValueError("analysis_window frames dimension must be 1 or match frames")
 
     idx_floor = frame_positions.floor().to(torch.int64)
