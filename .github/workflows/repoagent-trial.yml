@@ -37,7 +37,7 @@ jobs:
 
       - name: Upload generated docs for review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: repoagent-markdown-docs
           path: markdown_docs
