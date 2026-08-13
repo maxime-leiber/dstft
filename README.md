@@ -188,6 +188,10 @@ development setup, test/pre-commit commands, and PR guidelines. Everyone
 participating is expected to follow the
 [Code of Conduct](CODE_OF_CONDUCT.md).
 
+If you use [aider](https://aider.chat) to contribute, this repo ships a
+minimal [`.aider.conf.yml`](.aider.conf.yml) (no auto-commits, wired to
+`pytest`/`pre-commit`) that's picked up automatically.
+
 ## Releasing
 
 The package version is derived automatically from git tags (via
