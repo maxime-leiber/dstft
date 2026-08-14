@@ -553,13 +553,17 @@ class DSTFT(nn.Module):
     def _inverse_dft_exact(
         self, stft: torch.Tensor
     ) -> torch.Tensor:  # pragma: no cover
-        """Exact DFT-backend inverse via a full Gram-operator CG solve (unreachable scaffolding).
+        """Disabled placeholder for an exact DFT-backend inverse via a Gram-operator CG solve.
+
+        Not wired into ``inverse()``'s method dispatch and currently unreachable:
+        always raises before doing any work, while the adjoint/Gram operator this
+        would rely on is being validated.
 
         Args:
             stft: Complex STFT tensor of shape ``[batch, freq_bins, frames]``.
 
-        Returns:
-            The reconstructed real time-domain signal.
+        Raises:
+            NotImplementedError: Always, until this is wired in and enabled.
         """
         # Not wired into inverse()'s method dispatch yet (kept as scaffolding
         # for a future exact DFT-backend inverse); unreachable until then.
@@ -737,7 +741,13 @@ class DSTFT(nn.Module):
     def _effective_win_length(
         self, *, device: torch.device, dtype: torch.dtype
     ) -> torch.Tensor:
-        """Map the raw (unconstrained) window-length parameter into `[win_length_min, n_fft]`.
+        """Map the raw (unconstrained) window-length parameter into `[_default_win_length_min, n_fft]`.
+
+        Note this lower bound is `_default_win_length_min`, not the public
+        `win_length_min` attribute: when the constructor's `win_length_min`
+        argument is omitted, `_default_win_length_min` falls back to the
+        constructor's (fixed) initial hop length rather than to
+        `win_length_min`'s own default (`max(1, n_fft // 100)`).
 
         Args:
             device: Device to place the result on.
