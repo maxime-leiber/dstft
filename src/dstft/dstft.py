@@ -478,6 +478,7 @@ class DSTFT(nn.Module):
             ).real
 
             def apply_a(x_time: torch.Tensor) -> torch.Tensor:
+                """Apply the forward DFT-backend analysis operator ``A`` to a time signal."""
                 frames_x, idx_floor_x, idx_frac_x = _core.unfold_floor_frac(
                     x=x_time,
                     frame_positions=frame_positions,
@@ -492,6 +493,7 @@ class DSTFT(nn.Module):
                 )
 
             def apply_at(y_stft: torch.Tensor) -> torch.Tensor:
+                """Apply the adjoint operator ``A*`` to an STFT, returning a real time signal."""
                 return _core.adstft_dft_adjoint(
                     stft=y_stft,
                     analysis_window=analysis_window.to(y_stft.dtype),
@@ -501,10 +503,12 @@ class DSTFT(nn.Module):
                 ).real
 
             def apply_mat(x_time: torch.Tensor) -> torch.Tensor:
+                """Apply the regularized Gram operator ``A* A + λI`` used by the CG solve."""
                 x_stft = apply_a(x_time)
                 return apply_at(x_stft) + (float(cg_lambda) * x_time)
 
             def precond(r: torch.Tensor) -> torch.Tensor:
+                """Apply the diagonal (WOLA-denominator) preconditioner to a CG residual."""
                 return r / den[None, :]
 
             x0 = torch.zeros_like(b)
@@ -549,6 +553,18 @@ class DSTFT(nn.Module):
     def _inverse_dft_exact(
         self, stft: torch.Tensor
     ) -> torch.Tensor:  # pragma: no cover
+        """Disabled placeholder for an exact DFT-backend inverse via a Gram-operator CG solve.
+
+        Not wired into ``inverse()``'s method dispatch and currently unreachable:
+        always raises before doing any work, while the adjoint/Gram operator this
+        would rely on is being validated.
+
+        Args:
+            stft: Complex STFT tensor of shape ``[batch, freq_bins, frames]``.
+
+        Raises:
+            NotImplementedError: Always, until this is wired in and enabled.
+        """
         # Not wired into inverse()'s method dispatch yet (kept as scaffolding
         # for a future exact DFT-backend inverse); unreachable until then.
         raise NotImplementedError(
@@ -584,6 +600,7 @@ class DSTFT(nn.Module):
             )
 
         def apply_gram(x_flat: torch.Tensor) -> torch.Tensor:
+            """Apply the full Gram operator ``A* A`` to a flattened time signal."""
             x = x_flat.view(-1, signal_length)
             frames, _, _ = _core.unfold_floor_frac(
                 x=x,
@@ -674,6 +691,13 @@ class DSTFT(nn.Module):
         )
 
     def _validate_parameter_shapes(self) -> None:
+        """Validate that the raw win_length/hop_length tensors have broadcastable shapes.
+
+        Raises:
+            RuntimeError: If `win_length` or `hop_length` has the wrong number of
+                dimensions, or a size that is neither 1 nor the expected
+                broadcast target (`freq_bins`/`frames`).
+        """
         if self._raw_win_length.ndim != 2:
             raise RuntimeError("win_length must be 2D")
         if self._num_frames is None:
@@ -717,6 +741,21 @@ class DSTFT(nn.Module):
     def _effective_win_length(
         self, *, device: torch.device, dtype: torch.dtype
     ) -> torch.Tensor:
+        """Map the raw (unconstrained) window-length parameter into `[_default_win_length_min, n_fft]`.
+
+        Note this lower bound is `_default_win_length_min`, not the public
+        `win_length_min` attribute: when the constructor's `win_length_min`
+        argument is omitted, `_default_win_length_min` falls back to the
+        constructor's (fixed) initial hop length rather than to
+        `win_length_min`'s own default (`max(1, n_fft // 100)`).
+
+        Args:
+            device: Device to place the result on.
+            dtype: Floating-point dtype for the result.
+
+        Returns:
+            The constrained window length, via a sigmoid squashing of `_raw_win_length`.
+        """
         raw = self._raw_win_length.to(device=device, dtype=dtype)
         win_min = torch.tensor(
             float(self._default_win_length_min), device=device, dtype=dtype
@@ -727,6 +766,15 @@ class DSTFT(nn.Module):
     def _effective_hop_length(
         self, *, device: torch.device, dtype: torch.dtype
     ) -> torch.Tensor:
+        """Map the raw (unconstrained) hop-length parameter into `[hop_length_min, hop_length_max]`.
+
+        Args:
+            device: Device to place the result on.
+            dtype: Floating-point dtype for the result.
+
+        Returns:
+            The constrained hop length, via a sigmoid squashing of `_raw_hop_length`.
+        """
         raw = self._raw_hop_length.to(device=device, dtype=dtype)
         hop_min = torch.tensor(float(self.hop_length_min), device=device, dtype=dtype)
         hop_max = torch.tensor(float(self.hop_length_max), device=device, dtype=dtype)
@@ -769,6 +817,19 @@ class DSTFT(nn.Module):
         return plot_win_lengths(self.win_length, **kwargs)
 
     def _resolve_window(self, window: WindowSpec) -> WindowFn:
+        """Resolve a window spec (name or callable) into a window-generating callable.
+
+        Args:
+            window: Either a known window-name string (currently only `"hann"`)
+                or a callable already matching the `WindowFn` protocol.
+
+        Returns:
+            The resolved `WindowFn` callable.
+
+        Raises:
+            ValueError: If `window` is a string that names an unknown window.
+            TypeError: If `window` is neither a string nor callable.
+        """
         if isinstance(window, str):
             if window == "hann":
                 return windows.hann_window
