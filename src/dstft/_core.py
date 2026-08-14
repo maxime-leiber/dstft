@@ -15,6 +15,16 @@ _DFT_TWIDDLE_CACHE: dict[tuple[int, int, torch.device, torch.dtype], torch.Tenso
 def _get_rfft_m(
     *, freq_bins: int, device: torch.device, dtype: torch.dtype
 ) -> torch.Tensor:
+    """Return the cached frequency-bin index vector `m = [0, 1, ..., freq_bins - 1]`.
+
+    Args:
+        freq_bins: Number of frequency bins.
+        device: Device to place the tensor on.
+        dtype: Floating-point dtype for the tensor.
+
+    Returns:
+        A 1D tensor of shape `[freq_bins]`, cached per `(freq_bins, device, dtype)`.
+    """
     key = (freq_bins, device, dtype)
     cached = _FFT_FORWARD_CACHE.get(key)
     if cached is None:
@@ -30,6 +40,18 @@ def _get_dft_twiddle(
     device: torch.device,
     dtype: torch.dtype,
 ) -> torch.Tensor:
+    """Return the cached DFT twiddle-factor matrix `exp(-2j*pi*m*k/n_fft)`.
+
+    Args:
+        n_fft: FFT size (number of time samples per frame).
+        freq_bins: Number of frequency bins.
+        device: Device to place the tensor on.
+        dtype: Floating-point dtype used to build the complex exponential.
+
+    Returns:
+        A complex tensor of shape `[freq_bins, n_fft]`, cached per
+        `(n_fft, freq_bins, device, dtype)`.
+    """
     key = (n_fft, freq_bins, device, dtype)
     cached = _DFT_TWIDDLE_CACHE.get(key)
     if cached is None:
