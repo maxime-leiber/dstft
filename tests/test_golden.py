@@ -16,12 +16,16 @@ from tests.golden._configs import CONFIGS, golden_path, make_signal
 from dstft import DSTFT
 
 
-# Loose enough to tolerate cross-platform/cross-torch-version floating-point
-# differences in FFT/BLAS implementations, tight enough to catch an actual
-# regression in dstft's own math (which would show up as a much larger
-# deviation, not a last-bit rounding difference).
-RTOL = 1e-4
-ATOL = 1e-6
+# References were generated on one platform/Python version; CI reruns this
+# on 3.10/3.11/3.12, each linking a different BLAS/FFT build. That alone was
+# enough to produce ~1.2e-6 absolute differences on near-zero bins (observed
+# on the 3.10 job: e.g. a true value around 3e-4 differing by ~1.2e-6, which
+# is only ~0.4% relative *because* the value is tiny -- rtol alone can't
+# cover that, atol has to). ATOL is set with an ~8x margin over what was
+# actually observed; RTOL covers larger-magnitude values. A real regression
+# in dstft's own math would show up as a much larger deviation than either.
+RTOL = 1e-3
+ATOL = 1e-5
 
 
 def _run(config: dict) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
