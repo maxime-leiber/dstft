@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import matplotlib.axes
+import matplotlib.figure
 import matplotlib.pyplot as plt
 import torch
 
@@ -23,7 +25,7 @@ def plot_spec(
     ax: Any | None = None,
     show: bool = True,
     **imshow_kwargs: Any,
-):
+) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
     """Plot a magnitude spectrogram.
 
     Args:
@@ -91,7 +93,7 @@ def plot_win_lengths(
     figsize: tuple[float, float] = (10.0, 4.0),
     ax: Any | None = None,
     show: bool = True,
-):
+) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
     """Plot window length parameter(s).
 
     This plots a "distribution" image (like legacy versions):
