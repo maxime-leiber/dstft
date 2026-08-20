@@ -14,7 +14,7 @@ repos:
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Dependabot ("pre-commit" ecosystem) garde ce rev à jour automatiquement
-    rev: v0.16.2
+    rev: v0.16.3
     hooks:
       # Exécute le linter ruff et corrige automatiquement les problèmes simples
       - id: ruff
