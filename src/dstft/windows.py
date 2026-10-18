@@ -52,9 +52,9 @@ def hann_window(
         )
 
     f_dim, t_dim = theta_t.shape
-    if f_dim not in {1, freq_bins}:
+    if f_dim not in (1, freq_bins):
         raise ValueError("theta first dimension must be 1 or freq_bins")
-    if t_dim not in {1, frames}:
+    if t_dim not in (1, frames):
         raise ValueError("theta second dimension must be 1 or frames")
 
     if t_dim != 1 and frames != idx_frac.numel():
@@ -97,10 +97,10 @@ def hann_window(
         )  # [1, frames, n_fft]
         x = x.expand((freq_bins, frames, n_fft))
 
-    if normalization in {"paper", "contract"}:
+    if normalization in ("paper", "contract"):
         # Exact paper contraction: ω(x,θ) = (L/θ) ω_L((L/θ) x), where L=n_fft.
         scale = float(n_fft) / theta_eval
-        if theta_shape in {"scalar", "time"}:
+        if theta_shape in ("scalar", "time"):
             x_eval = scale[..., None] * x
             u = x_eval + float(n_fft) / 2.0
             w = 0.5 - 0.5 * torch.cos(2.0 * pi * u / float(n_fft))
@@ -118,7 +118,7 @@ def hann_window(
         w = 0.5 - 0.5 * torch.cos(2.0 * pi * u / theta_eval[..., None])
         w = w.masked_fill((u < 0.0) | (u >= theta_eval[..., None]), 0.0)
 
-    if normalization is None or normalization in {"paper", "contract"}:
+    if normalization is None or normalization in ("paper", "contract"):
         return w
     if normalization == "unit":
         denom = w.sum(dim=-1, keepdim=True).clamp_min(torch.finfo(dtype).eps)
