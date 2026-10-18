@@ -145,27 +145,28 @@ reconstructing the signal back from the transform.
 
 ## PyTorch compatibility
 
-- **`torch.compile`**: the default backend works (tested on PyTorch
-  2.13), including a full forward/backward/optimizer step (e.g.
-  optimizing `hop_length`/`win_length`) — output matches eager exactly.
-  It hits one graph break from a `.item()` call used internally
-  (`compute_frame_positions_fixed_hop` in `_core.py`) to turn a
-  computed frame count into a Python int; dynamo falls back to eager for
-  that piece and continues, which is why the result still matches eager.
-  **`fullgraph=True` does not work**: with `fullgraph=True`, dynamo
-  cannot fall back at that same `.item()` call and instead tries to
-  reason about the frame count symbolically, which fails with
-  `torch._dynamo.exc.BackendCompilerFailed:
-  GuardOnDataDependentSymNode` further downstream. Avoiding this would
-  need reworking how frame counts flow through the FFT backend to avoid
-  data-dependent shapes under full-graph capture — a real engineering
-  effort, not a small fix, so it's documented here rather than forced.
-- **`torch.jit.script`**: not currently supported. `DSTFT.frame_centers`
-  uses keyword-only arguments with defaults (`*, device=None,
-  dtype=None`), which TorchScript's compiler rejects
-  (`torch.jit.frontend.NotSupportedError`). Changing that signature would
-  be a public-API change, so it hasn't been done as a side effect of this
-  investigation. `torch.compile` (without `fullgraph=True`) is the
+- **`torch.compile`**: both the default backend and `fullgraph=True`
+  work (verified on PyTorch 2.14.1 in isolated processes, including a
+  full forward/backward/optimizer step, e.g. optimizing
+  `hop_length`/`win_length`, and across multiple input shapes) — output
+  and gradients match eager exactly either way. With the default
+  backend, there's one graph break from a `.item()` call used internally
+  (`compute_frame_positions_fixed_hop` in `_core.py`) to turn a computed
+  frame count into a Python int; dynamo falls back to eager for that
+  piece and continues. On PyTorch 2.13, `fullgraph=True` used to fail at
+  that same `.item()` call with
+  `torch._dynamo.exc.BackendCompilerFailed: GuardOnDataDependentSymNode`
+  (dynamo couldn't fall back and tried to reason about the frame count
+  symbolically instead) — a later PyTorch release improved
+  data-dependent-shape handling enough that this no longer reproduces,
+  so `fullgraph=True` is fully supported as of 2.14.1.
+- **`torch.jit.script`**: not currently supported (and PyTorch itself
+  now deprecates `torch.jit.script` in favor of `torch.compile`/
+  `torch.export`). `DSTFT.frame_centers` uses keyword-only arguments
+  with defaults (`*, device=None, dtype=None`), which TorchScript's
+  compiler rejects (`torch.jit.frontend.NotSupportedError`). Changing
+  that signature would be a public-API change, so it hasn't been done
+  as a side effect of this investigation. `torch.compile` is the
   supported path for graph compilation.
 
 ## Benchmark: DSTFT vs. `torch.stft`
