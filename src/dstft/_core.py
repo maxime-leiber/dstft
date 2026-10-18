@@ -15,6 +15,16 @@ _DFT_TWIDDLE_CACHE: dict[tuple[int, int, torch.device, torch.dtype], torch.Tenso
 def _get_rfft_m(
     *, freq_bins: int, device: torch.device, dtype: torch.dtype
 ) -> torch.Tensor:
+    """Return the cached frequency-bin index vector `m = [0, 1, ..., freq_bins - 1]`.
+
+    Args:
+        freq_bins: Number of frequency bins.
+        device: Device to place the tensor on.
+        dtype: Floating-point dtype for the tensor.
+
+    Returns:
+        A 1D tensor of shape `[freq_bins]`, cached per `(freq_bins, device, dtype)`.
+    """
     key = (freq_bins, device, dtype)
     cached = _FFT_FORWARD_CACHE.get(key)
     if cached is None:
@@ -30,6 +40,18 @@ def _get_dft_twiddle(
     device: torch.device,
     dtype: torch.dtype,
 ) -> torch.Tensor:
+    """Return the cached DFT twiddle-factor matrix `exp(-2j*pi*m*k/n_fft)`.
+
+    Args:
+        n_fft: FFT size (number of time samples per frame).
+        freq_bins: Number of frequency bins.
+        device: Device to place the tensor on.
+        dtype: Floating-point dtype used to build the complex exponential.
+
+    Returns:
+        A complex tensor of shape `[freq_bins, n_fft]`, cached per
+        `(n_fft, freq_bins, device, dtype)`.
+    """
     key = (n_fft, freq_bins, device, dtype)
     cached = _DFT_TWIDDLE_CACHE.get(key)
     if cached is None:
@@ -117,93 +139,6 @@ def unfold_floor_frac(
     return frames, idx_floor, idx_frac
 
 
-def overlap_add_wola(
-    *,
-    frames: torch.Tensor,
-    frame_positions: torch.Tensor,
-    analysis_window: torch.Tensor,
-    signal_length: int,
-    eps: float,
-) -> torch.Tensor:
-    """Weighted overlap-add (WOLA) synthesis for DSTFT.
-
-    This reconstructs a real-valued signal from time-domain frames using a
-    differentiable weighted overlap-add (WOLA) scheme:
-
-        x_hat = num / (den + eps)
-
-    where `num` accumulates windowed frames and `den` accumulates the squared
-    synthesis window (we use synthesis=analysis).
-
-    Convention:
-        Frames are assumed to be gathered/placed around `floor(t_n)` (local-frame
-        convention), and any out-of-range samples are ignored (implicit
-        zero-padding).
-
-    Args:
-        frames: Time-domain frames `[batch, frames, n_fft]`.
-        frame_positions: Frame center positions `t_n` `[frames]`.
-        analysis_window: Analysis window, broadcastable to `[1, frames, n_fft]`.
-            Supported shapes: `[frames, n_fft]`, `[1, frames, n_fft]`, `[1, 1, n_fft]`.
-        signal_length: Target output signal length.
-        eps: Small constant for numerical stability.
-
-    Returns:
-        Reconstructed signal `x_hat` of shape `[batch, signal_length]`.
-    """
-    if frames.ndim != 3:
-        raise ValueError("frames must have shape [batch, frames, n_fft]")
-    if frame_positions.ndim != 1:
-        raise ValueError("frame_positions must have shape [frames]")
-    if signal_length <= 0:
-        raise ValueError("signal_length must be positive")
-
-    batch, num_frames, n_fft = frames.shape
-    if num_frames != frame_positions.numel():
-        raise ValueError("frames and frame_positions must agree on frames")
-
-    if analysis_window.ndim == 2:
-        win = analysis_window.unsqueeze(0)
-    elif analysis_window.ndim == 3:
-        win = analysis_window
-    else:
-        raise ValueError(
-            "analysis_window must have shape [frames, n_fft] or [1, frames, n_fft] or [1, 1, n_fft]"
-        )
-    if win.shape[-1] != n_fft:
-        raise ValueError("analysis_window last dimension must match n_fft")
-
-    # Synthesis window equals analysis window (WOLA).
-    win = win.to(device=frames.device, dtype=frames.dtype)
-    win2 = win.pow(2)
-
-    num = torch.zeros((batch, signal_length), device=frames.device, dtype=frames.dtype)
-    den = torch.zeros((signal_length,), device=frames.device, dtype=frames.dtype)
-
-    idx_floor = frame_positions.floor().to(torch.int64)
-    half = int(n_fft) // 2
-    k = torch.arange(n_fft, device=frames.device, dtype=torch.int64) - half
-    idx = idx_floor[:, None] + k[None, :]  # [frames, n_fft]
-
-    valid = (idx >= 0) & (idx < signal_length)
-    idx_safe = idx.clamp(0, signal_length - 1)
-
-    frames_win = frames * win
-    frames_den = win2.squeeze(0) if win.shape[0] == 1 else win2
-
-    for t in range(num_frames):
-        idx_t = idx_safe[t]
-        valid_t = valid[t]
-        num[:, idx_t] += frames_win[:, t, :] * valid_t.to(frames.dtype)[None, :]
-
-        # Denominator is batch-independent.
-        den[idx_t] += frames_den[0 if frames_den.shape[0] == 1 else t, :] * valid_t.to(
-            frames.dtype
-        )
-
-    return num / (den[None, :] + float(eps))
-
-
 def overlap_add_dual(
     *,
     frames: torch.Tensor,
@@ -250,9 +185,11 @@ def overlap_add_dual(
         raise ValueError("analysis_window last dimension must match n_fft")
 
     win = win.to(device=frames.device, dtype=frames.dtype)
-    if win.shape[0] == 1:
+    if win.shape[0] != 1:
+        raise ValueError("analysis_window leading dimension must be 1")
+    if win.shape[1] == 1:
         win = win.expand(1, num_frames, n_fft)
-    elif win.shape[0] != num_frames:
+    elif win.shape[1] != num_frames:
         raise ValueError("analysis_window frames dimension must be 1 or match frames")
 
     idx_floor = frame_positions.floor().to(torch.int64)

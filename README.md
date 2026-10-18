@@ -8,7 +8,9 @@
 [![License](https://img.shields.io/github/license/maxime-leiber/dstft.svg)](LICENSE)
 [![IEEE TSP](https://img.shields.io/badge/IEEE_TSP-DSTFT-00629B?logo=ieee&logoColor=white)](https://ieeexplore.ieee.org/abstract/document/11220928)
 
-**DSTFT** (Differentiable Short-Time Fourier Transform) is a PyTorch module for a differentiable short-time Fourier transform, supporting learnable/adaptive parameters.
+**dstft** implements a **Differentiable Short-Time Fourier Transform**: a PyTorch `nn.Module` (`DSTFT`) that computes a spectrogram conceptually like `torch.stft`, except every parameter that normally has to be fixed up front — the analysis window's length, and the spacing between frames — can instead be a learnable tensor. Because the whole transform is implemented with differentiable PyTorch ops, gradients flow from a downstream loss (e.g. "make this spectrogram sparse") back into the window length or hop length, letting an optimizer discover a time-frequency tiling adapted to the signal instead of a hand-picked one.
+
+Unlike `torch.stft`, `DSTFT` is initialized once per signal length (`dstft.initialize(x)`) and returns both the magnitude spectrogram and the complex transform (`spec, stft = dstft(x)`) — see the usage example below. Each instance is tied to the signal length it was first initialized with; reinitializing with a different length raises `RuntimeError` (create a new instance instead).
 
 ---
 
@@ -26,7 +28,37 @@ Gradient-based optimization of DSTFT parameters (example: window length).
 
 ## Installation
 
-### pip/venv
+### From PyPI
+
+For general use, install the published package:
+
+```bash
+pip install dstft
+```
+
+Or with [`uv`](https://github.com/astral-sh/uv):
+
+```bash
+uv venv
+source .venv/bin/activate
+uv pip install dstft
+```
+
+Or in a Conda/Mamba environment (there is no separate conda-forge package;
+`pip install` works the same once the environment is activated):
+
+```bash
+mamba create -n dstft python=3.11 pip
+mamba activate dstft
+pip install dstft
+```
+
+### For development (editable install)
+
+To contribute to `dstft` itself, clone the repository and install in
+editable mode instead — see [Contributing](#contributing) below.
+
+#### pip/venv
 
 Create and activate a virtual environment, then install in editable mode:
 
@@ -37,7 +69,7 @@ pip install -U pip
 pip install -e .
 ```
 
-### Conda/Mamba + uv
+#### Conda/Mamba + uv
 
 Create a new environment:
 
@@ -92,6 +124,56 @@ dstft.initialize(x)
 spec, stft = dstft(x)
 ```
 
+Since `window_mode="constant"` makes `win_length` a learnable parameter, it
+can be optimized directly by gradient descent — no separate API, just a
+normal PyTorch training loop against any loss defined on `spec`/`stft`:
+
+```python
+optimizer = torch.optim.Adam(dstft.parameters(), lr=1.0)
+for _ in range(200):
+    optimizer.zero_grad()
+    spec, _ = dstft(x)
+    loss = spec.sum(dim=(1, 2)).mean()  # e.g. any loss defined on the spectrogram
+    loss.backward()
+    optimizer.step()
+
+print(dstft.win_length)  # moved away from its initial value of 256.0
+```
+
+See `notebooks/inverse.ipynb` for a full worked example, including
+reconstructing the signal back from the transform.
+
+## Benchmark: DSTFT vs. `torch.stft`
+
+`DSTFT` trades speed and memory for learnable parameters. For a sense of the
+overhead, `scripts/benchmark_vs_torch_stft.py` compares `DSTFT`'s complete
+`forward()` API, in its cheapest non-learnable configuration
+(`window_mode="fixed"`, `hop_mode="fixed"`), against raw `torch.stft` with
+equivalent parameters (`n_fft=1024`, `hop_length=256`, Hann window, batch
+size 8). This isn't an equal-amount-of-work comparison: `DSTFT.forward()`
+always computes and returns both the magnitude spectrogram and the complex
+transform, while `torch.stft` only computes the latter, so part of the gap
+below is genuinely more output, not pure overhead. Measured on CPU (PyTorch
+2.13); numbers vary by machine and are meant to convey order of magnitude,
+not precise guarantees.
+
+| Signal length | `torch.stft` (raw) | `DSTFT` `forward()` | `DSTFT` forward+backward |
+| --- | ---: | ---: | ---: |
+| 1s @16kHz | 2.2 ms | 9.1 ms | 14.1 ms |
+| 5s @16kHz | 9.0 ms | 37.4 ms | 63.9 ms |
+| 30s @16kHz | 43.3 ms | 380.3 ms | 779.7 ms |
+
+(one representative run; see the script's docstring for exact parameters).
+`DSTFT`'s forward pass is roughly 4-9x slower than raw `torch.stft` and
+shows about 3x the cumulative positive per-op CPU allocations reported by
+`torch.profiler` for a 5s signal (~45 MB for `torch.stft` vs. ~135 MB for
+`DSTFT` — this is allocator-pressure activity, not a peak-live-memory
+figure; `torch.profiler` doesn't expose a single peak-memory number). This
+reflects both the extra output and the machinery needed for a
+window/hop-length-independent, differentiable formulation — `torch.stft` is
+a single fused, highly optimized native op with no such flexibility. Run
+the script yourself (`python scripts/benchmark_vs_torch_stft.py`) to
+reproduce these numbers on your own hardware.
 
 ## License
 
@@ -101,7 +183,14 @@ This project is licensed under the terms of the MIT License. See the
 ## Contributing
 
 Contributions are welcome! Please open issues or pull requests for bug fixes,
-improvements, or new features.
+improvements, or new features. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+development setup, test/pre-commit commands, and PR guidelines. Everyone
+participating is expected to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
+If you use [aider](https://aider.chat) to contribute, this repo ships a
+minimal [`.aider.conf.yml`](.aider.conf.yml) (no auto-commits, wired to
+`pytest`/`pre-commit`) that's picked up automatically.
 
 ## Releasing
 

@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite it using the metadata below, and
+  consider citing the associated paper (see "preferred-citation"). See
+  https://dstft.readthedocs.io/en/latest/citation.html for the full list of
+  related publications.
+title: dstft
+abstract: >-
+  Differentiable Short-Time Fourier Transform (DSTFT) for PyTorch: a
+  gradient-based, learnable time-frequency representation whose window
+  length and hop length can be optimized like any other neural network
+  parameter, instead of being fixed up front.
+authors:
+  - given-names: Maxime
+    family-names: Leiber
+license: MIT
+repository-code: https://github.com/maxime-leiber/dstft
+url: https://dstft.readthedocs.io
+type: software
+preferred-citation:
+  type: article
+  title: >-
+    Optimal Adaptive Time-Frequency Representation via Differentiable
+    Short-Time Fourier Transform
+  authors:
+    - given-names: Maxime
+      family-names: Leiber
+    - given-names: Yosra
+      family-names: Marnissi
+    - given-names: Axel
+      family-names: Barrau
+    - given-names: Sylvain
+      family-names: Meignen
+    - given-names: Laurent
+      family-names: Massoulié
+  journal: IEEE Transactions on Signal Processing
+  year: 2025
+  volume: 73
+  start: 5047
+  end: 5059
+  doi: 10.1109/TSP.2025.3624477

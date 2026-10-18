@@ -1,11 +1,14 @@
 Getting started
 ===============
 
-Install the package in editable mode:
+Install the package:
 
 .. code-block:: bash
 
-   pip install -e .
+   pip install dstft
+
+See :doc:`installation` for other installation methods (``uv``, Conda/Mamba,
+or an editable install for development).
 
 Quick example:
 

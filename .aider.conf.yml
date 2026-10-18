@@ -1,0 +1,10 @@
+# Minimal aider (https://aider.chat) configuration for this repo.
+# See https://aider.chat/docs/config/aider_conf.html for the full option list.
+
+# Contributions go through PRs (see CONTRIBUTING.md); let the author review
+# and commit changes explicitly rather than having aider auto-commit them.
+auto-commits: false
+
+# Hook aider's built-in test/lint commands into what this repo already uses.
+test-cmd: pytest
+lint-cmd: pre-commit run --files
