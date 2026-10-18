@@ -14,7 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # setuptools-scm needs the full history and tags to compute the
           # version; a shallow checkout would silently fall back to
@@ -36,7 +36,7 @@ jobs:
           python -m pip install --quiet twine
           python -m twine check dist/*
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -48,7 +48,7 @@ jobs:
     permissions:
       id-token: write # required for PyPI Trusted Publishing
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
